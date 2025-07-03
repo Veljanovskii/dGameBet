@@ -9,7 +9,7 @@ dGameBet is a decentralized application (Đapp) for betting on football match re
 - **Accurate Timing:** Smart contracts enforce the correct start time for each match.
 - **Preset Bet Amounts:** All participants bet the same amount (defined by the organizer).
 - **Secure Result Submission:** After the match, the organizer submits the final score; winnings are distributed accordingly.
-- **Automatic Payouts:** 
+- **Automatic Payouts:**
   - 5% of the total pool goes to the organizer.
   - The remainder is split among those who bet on the winning team.
   - In case of a draw, all stakes are refunded.
@@ -36,12 +36,14 @@ dGameBet is a decentralized application (Đapp) for betting on football match re
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/yourusername/dgamebet.git
    cd dgamebet
    ```
 
 2. **Install dependencies:**
+
    ```bash
    yarn install
    # or
@@ -53,6 +55,7 @@ dGameBet is a decentralized application (Đapp) for betting on football match re
    - Add your Infura API key and other required secrets.
 
 4. **Compile and deploy smart contracts:**
+
    ```bash
    npx hardhat compile
    npx hardhat run scripts/deploy.js --network sepolia
@@ -75,21 +78,18 @@ dGameBet is a decentralized application (Đapp) for betting on football match re
 
 ## 📝 Project Specification (Serbian)
 
-Napraviti Đapp dGameBet za klađenje na rezultat fudbalske utakmice. Organizator igre kreira 
-pametni ugovor aplikacije i navodi tačno vreme početka utakmice (obezbediti u pametnom 
-ugovoru pravilan proračun vremena početka). Svako ima pravo da uloži na pobedu jednog od dva 
-tima tačan ulog koji je definisan prilikom kreiranja utakmice. Nakon kraja utakmice, organizator 
-klađenja je dužan da unese konačan rezultat utakmice na osnovu čega će premija biti 
-raspoređena. 5% premije ide organizatoru klađenja dok se ostatak deli na one koji su se kladili na 
-pobednički tim. Ukoliko je rezultat nerešen, sredstva treba da budu vraćena svim ulagačima. 
-Glavni pametni ugovor Đapp-a treba da obezbedi listanje aktivnih utakmica na koje može da se 
-kladi kao i utakmica koje su završene. Obezbediti da oni koji su se kladili mogu da ocenjuju 
+Napraviti Đapp dGameBet za klađenje na rezultat fudbalske utakmice. Organizator igre kreira
+pametni ugovor aplikacije i navodi tačno vreme početka utakmice (obezbediti u pametnom
+ugovoru pravilan proračun vremena početka). Svako ima pravo da uloži na pobedu jednog od dva
+tima tačan ulog koji je definisan prilikom kreiranja utakmice. Nakon kraja utakmice, organizator
+klađenja je dužan da unese konačan rezultat utakmice na osnovu čega će premija biti
+raspoređena. 5% premije ide organizatoru klađenja dok se ostatak deli na one koji su se kladili na
+pobednički tim. Ukoliko je rezultat nerešen, sredstva treba da budu vraćena svim ulagačima.
+Glavni pametni ugovor Đapp-a treba da obezbedi listanje aktivnih utakmica na koje može da se
+kladi kao i utakmica koje su završene. Obezbediti da oni koji su se kladili mogu da ocenjuju
 organizatora klađenja.
 
 ## 🤝 Contributing
 
 Pull requests are welcome! For major changes, please open an issue first to discuss what you’d like to change.
 
-## 📄 License
-
-[MIT](LICENSE)
