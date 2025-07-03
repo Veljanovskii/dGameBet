@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+contract FootballGameBet {
+    string public homeTeam; 
+    string public awayTeam;
+    uint8 public homeTeamGoals;
+    uint8 public awayTeamGoals;
+    uint256 public startTime;
+    address payable public organiser;
+    uint256 public stake;
+
+    mapping(address => uint8) public bets; // 1 - home, 2 - away
+    address payable[] public players;
+
+    constructor(string memory _homeTeam, string memory _awayTeam, uint256 _startTime, uint256 _stake, address payable _organiser) {
+        require(_startTime > block.timestamp, "Invalid game start time.");
+        require(bytes(_homeTeam).length > 0, "Home team required.");
+        require(bytes(_awayTeam).length > 0, "Away team required.");
+        require(_stake > 0, "Stake must be positive.");
+
+        homeTeam = _homeTeam;
+        awayTeam = _awayTeam;
+        startTime = _startTime;
+        organiser = _organiser;
+        stake = _stake;
+    }
+
+    function betOnHomeTeam() external payable canPlaceBet bettingOpen stakeCorrect {
+        bets[msg.sender] = 1;
+        players.push(payable(msg.sender));
+    }
+
+    function betOnAwayTeam() external payable canPlaceBet bettingOpen stakeCorrect {
+        bets[msg.sender] = 2;
+        players.push(payable(msg.sender));
+    }
+
+    function gameFinished(uint8 homeGoals, uint8 awayGoals) external onlyOrganiser {
+        require(address(this).balance > 0, "Contract balance empty.");
+
+        homeTeamGoals = homeGoals;
+        awayTeamGoals = awayGoals;
+
+        uint8 winner = homeGoals > awayGoals ? 1 : awayGoals > homeGoals ? 2 : 0;
+
+        uint256 totalPool = address(this).balance;
+        if (winner == 0) {
+            for (uint256 i = 0; i < players.length; i++) {
+                (bool refunded, ) = players[i].call{value: stake}("");
+                require(refunded, "Refund failed.");
+            }
+        } else {
+            uint256 organiserFee = (totalPool * 5) / 100;
+            uint256 winningAmount = totalPool - organiserFee;
+            uint256 numOfWinners;
+
+            for (uint256 i = 0; i < players.length; i++) {
+                if (bets[players[i]] == winner) {
+                    numOfWinners++;
+                }
+            }
+
+            uint256 payoutPerWinner = winningAmount / numOfWinners;
+
+            for (uint256 i = 0; i < players.length; i++) {
+                if (bets[players[i]] == winner) {
+                    (bool success, ) = players[i].call{value: payoutPerWinner}("");
+                    require(success, "Payout failed.");
+                }
+            }
+
+            (bool organiserPaid, ) = organiser.call{value: organiserFee}("");
+            require(organiserPaid, "Organizer payout failed.");
+        }
+    }
+
+    // Modifiers
+    modifier bettingOpen() {
+        require(block.timestamp <= startTime, "Betting closed.");
+        _;
+    }
+
+    modifier stakeCorrect() {
+        require(msg.value == stake, "Incorrect stake amount.");
+        _;
+    }
+
+    modifier canPlaceBet() {
+        require(bets[msg.sender] == 0, "Bet already placed.");
+        _;
+    }
+
+    modifier onlyOrganiser() {
+        require(msg.sender == organiser, "Only organiser allowed.");
+        _;
+    }
+} 
