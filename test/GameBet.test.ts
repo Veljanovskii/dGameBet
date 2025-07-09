@@ -55,6 +55,7 @@ describe('GameBet', function () {
       await gameBet
         .connect(organiser)
         .createFootballBet('TeamA', 'TeamB', startTime, stake);
+      expect((await gameBet.ratings(organiser.address)).active).to.be.true;
       const bets = await gameBet.getBets();
       const footballGameBetAddress = bets[0];
 
@@ -70,12 +71,15 @@ describe('GameBet', function () {
       await hre.network.provider.send('evm_increaseTime', [4000]);
       await hre.network.provider.send('evm_mine');
 
-      expect(await gameBet.canVote(organiser.address, footballGameBetAddress))
-        .to.be.true;
+      const expectedOrganiser = await footballGameBet.organiser();
+      
+      expect(
+        await gameBet.connect(voter).canVote(expectedOrganiser, footballGameBetAddress)
+      ).to.be.true;
 
       await gameBet
         .connect(voter)
-        .vote(organiser.address, footballGameBetAddress, 5);
+        .vote(expectedOrganiser, footballGameBetAddress, 5);
     });
   });
 });
