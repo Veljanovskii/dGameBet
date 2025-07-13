@@ -21,6 +21,7 @@
       }
     ]
   },
+  "extends": "./tsconfig.next.json",
   "include": ["./contracts", "./scripts", "./test", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "./src", "./next.config.js"]
 }
