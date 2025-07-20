@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useWriteContract } from 'wagmi';
+import { useEffect, useRef } from 'react';
 import { parseEther } from 'viem';
 import { GAME_BET_ADDRESS, GAME_BET_ABI } from '@contracts/contracts';
 import {
@@ -24,25 +25,57 @@ export default function CreateBetForm() {
     ? Math.floor(new Date(startTime).getTime() / 1000)
     : 0;
 
-  const { writeContract, data, status } = useWriteContract();
+  const { writeContract, data, status, error } = useWriteContract();
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const errorLogged = useRef(false);
 
   const isLoading = status === 'pending';
   const isSuccess = status === 'success';
   const isError = status === 'error';
 
-  const handleCreate = async () => {
+  useEffect(() => {
+    if (isError && error && !errorLogged.current) {
+      let msg = 'Unknown error';
+      if (typeof error === 'object' && error !== null) {
+        if ('message' in error) {
+          msg = (error as any).message;
+        } else {
+          msg = JSON.stringify(error);
+        }
+      } else if (typeof error === 'string') {
+        msg = error;
+      }
+      setErrorMessage(msg);
+      errorLogged.current = true;
+      console.error('Contract call error:', error);
+    } else if (!isError) {
+      setErrorMessage(null);
+      errorLogged.current = false;
+    }
+  }, [isError, error]);
+
+  const handleCreate = () => {
     if (!homeTeam || !awayTeam || unixStartTime <= 0 || !stake) return;
 
+    let stakeValue;
     try {
-      await writeContract({
+        stakeValue = parseEther(stake);
+    } catch (err) {
+        alert('Invalid stake value');
+        return;
+    }
+
+    try {
+        writeContract({
         address: GAME_BET_ADDRESS as `0x${string}`,
         abi: GAME_BET_ABI,
         functionName: 'createFootballBet',
-        args: [homeTeam, awayTeam, unixStartTime, parseEther(stake)],
-        value: parseEther(stake),
-      });
+        args: [homeTeam, awayTeam, unixStartTime, stakeValue],
+        value: stakeValue,
+        });
     } catch (error) {
-      console.error('Transaction failed:', error);
+        console.error('Transaction failed:', error);
     }
   };
 
@@ -99,7 +132,12 @@ export default function CreateBetForm() {
           <p className="text-sm text-green-600">Bet created successfully!</p>
         )}
         {isError && (
-          <p className="text-sm text-red-600">Transaction failed.</p>
+          <div className="text-sm text-red-600">
+            Transaction failed.
+            {errorMessage && (
+              <pre className="whitespace-pre-wrap break-all mt-2">{errorMessage}</pre>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

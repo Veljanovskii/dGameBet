@@ -1,15 +1,14 @@
 'use client';
 
 import { createConfig, http } from 'wagmi';
-import { sepolia, localhost } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 
 export const wagmiConfig = getDefaultConfig({
   appName: 'dGameBet',
-  projectId: 'dgamebet-local',
-  chains: [localhost, sepolia],
+  projectId: 'c0eff7080012dbe81000c487d96205eb',
+  chains: [sepolia],
   transports: {
-    [localhost.id]: http(),
     [sepolia.id]: http(process.env.NEXT_PUBLIC_INFURA_SEPOLIA_URL),
   },
   ssr: true,

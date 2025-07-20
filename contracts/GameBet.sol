@@ -16,14 +16,18 @@ contract GameBet {
 
     address[] public allBets;
 
-    function createFootballBet(string memory homeTeam, string memory awayTeam, uint256 startTime, uint256 stake) external {
-        FootballGameBet newBet = new FootballGameBet(homeTeam, awayTeam, startTime, stake, payable(msg.sender));
-        allBets.push(address(newBet));
+    function createFootballBet(
+        string memory homeTeam,
+        string memory awayTeam,
+        uint256 startTime,
+        uint256 stake) external payable {
+            FootballGameBet newBet = new FootballGameBet(homeTeam, awayTeam, startTime, stake, payable(msg.sender));
+            allBets.push(address(newBet));
 
-        if (!ratings[msg.sender].active) {
-            ratings[msg.sender].active = true;
-            organisers.push(msg.sender);
-        }
+            if (!ratings[msg.sender].active) {
+                ratings[msg.sender].active = true;
+                organisers.push(msg.sender);
+            }
     }
 
     function getBets() external view returns (address[] memory) {
@@ -56,4 +60,4 @@ contract GameBet {
         ratings[organiser].totalRate += rate;
         ratings[organiser].numberOfTimesRated++;
     }
-} 
+}

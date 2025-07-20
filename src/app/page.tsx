@@ -3,6 +3,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import CreateBetForm from '../components/CreateBetForm';
+import BetList from '@/components/BetList';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -13,11 +14,13 @@ export default function Home() {
 
       {isConnected && (
         <>
-          <div className="text-white">
+          <div className="mt-4 text-white">
             Connected as: <span className="font-mono">{address}</span>
           </div>
-
-          <CreateBetForm />
+          <div className='mt-6'>
+            <CreateBetForm />
+            <BetList />
+          </div>
         </>
       )}
     </main>
