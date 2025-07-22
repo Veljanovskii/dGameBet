@@ -1,4 +1,3 @@
-// app/api/bet-details/route.ts
 import { NextRequest } from 'next/server';
 import { createPublicClient, http, formatEther } from 'viem';
 import { sepolia } from 'viem/chains';
@@ -27,7 +26,7 @@ export async function GET(req: NextRequest) {
       homeTeam,
       awayTeam,
       stake: formatEther(BigInt(stake)),
-      startTime: new Date(Number(startTime) * 1000).toLocaleString(),
+      startTime: Number(startTime),
       organiser,
     });
   } catch (e) {

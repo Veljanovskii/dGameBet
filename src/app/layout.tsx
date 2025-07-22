@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-// Remove QueryClient and QueryClientProvider imports
 import { WagmiProvider } from 'wagmi';
 import { wagmiConfig } from '../lib/wagmi';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
