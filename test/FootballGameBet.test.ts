@@ -65,6 +65,7 @@ describe('FootballGameBet', function () {
       );
 
       await footballGameBet.connect(organiser).gameFinished(2, 1); // Home wins
+      expect(await footballGameBet.isSettled()).to.be.true;
 
       const balanceAfter = await hre.ethers.provider.getBalance(
         organiser.address
@@ -84,11 +85,40 @@ describe('FootballGameBet', function () {
       );
 
       await footballGameBet.connect(organiser).gameFinished(1, 1); // draw
+      expect(await footballGameBet.isSettled()).to.be.true;
 
       const balanceAfter = await hre.ethers.provider.getBalance(
         player1.address
       );
       expect(balanceAfter).to.be.gt(balanceBefore); // Player got refund
+    });
+  });
+
+  describe('Frontend View Helpers', function () {
+    it('Counts home and away bets correctly', async function () {
+      const { footballGameBet, player1, player2, stake } = await loadFixture(deployFixture);
+
+      await footballGameBet.connect(player1).betOnHomeTeam({ value: stake });
+      await footballGameBet.connect(player2).betOnAwayTeam({ value: stake });
+
+      const homeCount = await footballGameBet.totalHomeBets();
+      const awayCount = await footballGameBet.totalAwayBets();
+
+      expect(homeCount).to.equal(1n);
+      expect(awayCount).to.equal(1n);
+    });
+
+    it('Calculates home and away pools correctly', async function () {
+      const { footballGameBet, player1, player2, stake } = await loadFixture(deployFixture);
+
+      await footballGameBet.connect(player1).betOnHomeTeam({ value: stake });
+      await footballGameBet.connect(player2).betOnAwayTeam({ value: stake });
+
+      const homePool = await footballGameBet.homeTeamPool();
+      const awayPool = await footballGameBet.awayTeamPool();
+
+      expect(homePool).to.equal(stake);
+      expect(awayPool).to.equal(stake);
     });
   });
 });

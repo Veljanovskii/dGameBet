@@ -9,6 +9,7 @@ contract FootballGameBet {
     uint256 public startTime;
     address payable public organiser;
     uint256 public stake;
+    bool public isSettled = false;
 
     mapping(address => uint8) public bets; // 1 - home, 2 - away
     address payable[] public players;
@@ -41,6 +42,7 @@ contract FootballGameBet {
 
         homeTeamGoals = homeGoals;
         awayTeamGoals = awayGoals;
+        isSettled = true;
 
         uint8 winner = homeGoals > awayGoals ? 1 : awayGoals > homeGoals ? 2 : 0;
 
@@ -73,6 +75,34 @@ contract FootballGameBet {
             (bool organiserPaid, ) = organiser.call{value: organiserFee}("");
             require(organiserPaid, "Organizer payout failed.");
         }
+    }
+
+    function totalHomeBets() public view returns (uint256 count) {
+        for (uint256 i = 0; i < players.length; i++) {
+            if (bets[players[i]] == 1) {
+                count++;
+            }
+        }
+    }
+
+    function totalAwayBets() public view returns (uint256 count) {
+        for (uint256 i = 0; i < players.length; i++) {
+            if (bets[players[i]] == 2) {
+                count++;
+            }
+        }
+    }
+
+    function homeTeamPool() external view returns (uint256) {
+        return stake * totalHomeBets();
+    }
+
+    function awayTeamPool() external view returns (uint256) {
+        return stake * totalAwayBets();
+    }
+
+    function getIsSettled() external view returns (bool) {
+        return isSettled;
     }
 
     // Modifiers

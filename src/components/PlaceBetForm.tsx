@@ -1,21 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useWriteContract, useAccount } from 'wagmi';
-import { FOOTBALL_GAME_BET_ABI } from '@contracts/contracts';
+import { FOOTBALL_GAME_BET_ABI, GAME_BET_ABI } from '@contracts/contracts';
 import { parseEther } from 'viem';
 
 interface PlaceBetFormProps {
   betAddress: `0x${string}`;
   stake: string;
   startTime: number;
-  userHasAlreadyBet: boolean;
 }
 
-export default function PlaceBetForm({ betAddress, stake, startTime, userHasAlreadyBet }: PlaceBetFormProps) {
+export default function PlaceBetForm({ betAddress, stake, startTime }: PlaceBetFormProps) {
   const { address } = useAccount();
   const [loading, setLoading] = useState(false);
+  const [hasBet, setHasBet] = useState<boolean | null>(null);
   const { writeContractAsync } = useWriteContract();
+
+  useEffect(() => {
+    const fetchUserBet = async () => {
+      if (!address) return;
+
+      try {
+        const res = await fetch(`/api/user-bet?betAddress=${betAddress}&user=${address}`);
+        const data = await res.json();
+        setHasBet(data.bet !== 0);
+      } catch (err) {
+        console.error('Error fetching user bet:', err);
+        setHasBet(false); // fallback
+      }
+    };
+
+    fetchUserBet();
+  }, [address, betAddress]);
 
   const placeBet = async (team: 'home' | 'away') => {
     try {
@@ -30,6 +47,7 @@ export default function PlaceBetForm({ betAddress, stake, startTime, userHasAlre
       });
 
       alert(`Successfully placed bet on ${team === 'home' ? 'Home' : 'Away'} team!`);
+      setHasBet(true);
     } catch (err) {
       console.error(err);
       alert('❌ Failed to place bet. See console for details.');
@@ -38,14 +56,12 @@ export default function PlaceBetForm({ betAddress, stake, startTime, userHasAlre
     }
   };
 
-  const gameHasStarted = Date.now() >= startTime * 1000;
-
-  if (userHasAlreadyBet) {
-    return <div className="text-sm text-green-400">✅ You have already placed a bet.</div>;
+  if (hasBet === null) {
+    return <p className="text-sm text-gray-400">Checking if you’ve already bet...</p>;
   }
 
-  if (gameHasStarted) {
-    return <div className="text-sm text-red-400">⏱ Betting is closed for this match (game has started).</div>;
+  if (hasBet) {
+    return <p className="text-green-600 font-medium">✅ You've already placed a bet.</p>;
   }
 
   return (

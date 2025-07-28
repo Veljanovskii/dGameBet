@@ -15,6 +15,13 @@ type Bet = {
   stake: string;
   startTime: number;
   organiser: string;
+  totalHomeBets: number;
+  totalAwayBets: number;
+  homeTeamPool: string;
+  awayTeamPool: string;  
+  homeTeamGoals: number;
+  awayTeamGoals: number;
+  isSettled: boolean;
 };
 
 export default function BetList() {
@@ -82,6 +89,30 @@ export default function BetList() {
                 <p><strong>Stake:</strong> {bet.stake} ETH</p>
                 <p><strong>Start Time:</strong> {new Date(bet.startTime * 1000).toLocaleString()}</p>
                 <p><strong>Organiser:</strong> {bet.organiser}</p>
+                <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
+                    <div>
+                        <p className="font-semibold text-blue-700">🏠 Home Team</p>
+                        <p><strong>Bets:</strong> {bet.totalHomeBets}</p>
+                        <p><strong>Pool:</strong> {bet.homeTeamPool} ETH</p>
+                    </div>
+                    <div>
+                        <p className="font-semibold text-red-700">🚩 Away Team</p>
+                        <p><strong>Bets:</strong> {bet.totalAwayBets}</p>
+                        <p><strong>Pool:</strong> {bet.awayTeamPool} ETH</p>
+                    </div>
+                </div>
+                <p><strong>Status:</strong> {
+                    (() => {                    
+                        if (bet.isSettled) {
+                            if (bet.homeTeamGoals > bet.awayTeamGoals) return '✅ Game Settled – Home team won';
+                            if (bet.homeTeamGoals < bet.awayTeamGoals) return '✅ Game Settled – Away team won';
+                            return '✅ Game Settled – Draw';
+                        }
+
+                        const gameHasStarted = Date.now() >= bet.startTime * 1000;
+                        return gameHasStarted ? '🔴 Betting Closed' : '🟢 Betting Open';
+                    })()
+                }</p>
 
                 {userAddress?.toLowerCase() !== bet.organiser.toLowerCase() ? (
                     <p className="text-green-600 font-medium">You're the organiser!</p>
@@ -91,7 +122,6 @@ export default function BetList() {
                         betAddress={bet.address as `0x${string}`}
                         stake={bet.stake}
                         startTime={bet.startTime}
-                        userHasAlreadyBet={false}
                         />
                     )
                 )}
