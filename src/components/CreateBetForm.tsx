@@ -1,16 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useWriteContract } from 'wagmi';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseEther } from 'viem';
 import { GAME_BET_ADDRESS, GAME_BET_ABI } from '@contracts/contracts';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from '@/components/ui/card';
+import { notifyBetsChanged } from '@/lib/events';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,61 +17,69 @@ export default function CreateBetForm() {
   const [startTime, setStartTime] = useState('');
   const [stake, setStake] = useState('');
 
-  const unixStartTime = startTime
-    ? Math.floor(new Date(startTime).getTime() / 1000)
-    : 0;
+  const unixStartTime = startTime ? Math.floor(new Date(startTime).getTime() / 1000) : 0;
 
-  const { writeContract, data, status, error } = useWriteContract();
+  const { writeContract, data: txHash, status, error } = useWriteContract();
+  const {
+    isLoading: isMining,
+    isSuccess: isMined,
+    error: mineError,
+  } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const errorLogged = useRef(false);
 
-  const isLoading = status === 'pending';
-  const isSuccess = status === 'success';
-  const isError = status === 'error';
+  const isSubmitting = status === 'pending' || isMining;
 
   useEffect(() => {
+    const isError = status === 'error';
     if (isError && error && !errorLogged.current) {
       let msg = 'Unknown error';
       if (typeof error === 'object' && error !== null) {
-        if ('message' in error) {
-          msg = (error as any).message;
-        } else {
-          msg = JSON.stringify(error);
-        }
+        if ('message' in error) msg = (error as any).message;
+        else msg = JSON.stringify(error);
       } else if (typeof error === 'string') {
         msg = error;
       }
       setErrorMessage(msg);
       errorLogged.current = true;
-      console.error('Contract call error:', error);
     } else if (!isError) {
       setErrorMessage(null);
       errorLogged.current = false;
     }
-  }, [isError, error]);
+  }, [status, error]);
+
+  useEffect(() => {
+    if (isMined) {
+      notifyBetsChanged();
+      setHomeTeam('');
+      setAwayTeam('');
+      setStartTime('');
+      setStake('');
+    }
+  }, [isMined]);
 
   const handleCreate = () => {
     if (!homeTeam || !awayTeam || unixStartTime <= 0 || !stake) return;
 
     let stakeValue;
     try {
-        stakeValue = parseEther(stake);
-    } catch (err) {
-        alert('Invalid stake value');
-        return;
+      stakeValue = parseEther(stake);
+    } catch {
+      setErrorMessage('Invalid stake value');
+      return;
     }
 
     try {
-        writeContract({
+      writeContract({
         address: GAME_BET_ADDRESS as `0x${string}`,
         abi: GAME_BET_ABI,
         functionName: 'createFootballBet',
         args: [homeTeam, awayTeam, unixStartTime, stakeValue],
         value: stakeValue,
-        });
-    } catch (error) {
-        console.error('Transaction failed:', error);
+      });
+    } catch (e: any) {
+      setErrorMessage(e?.message ?? 'Transaction failed');
     }
   };
 
@@ -87,18 +91,12 @@ export default function CreateBetForm() {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Home Team</Label>
-          <Input
-            value={homeTeam}
-            onChange={(e) => setHomeTeam(e.target.value)}
-          />
+          <Input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} />
         </div>
 
         <div className="space-y-2">
           <Label>Away Team</Label>
-          <Input
-            value={awayTeam}
-            onChange={(e) => setAwayTeam(e.target.value)}
-          />
+          <Input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} />
         </div>
 
         <div className="space-y-2">
@@ -122,21 +120,17 @@ export default function CreateBetForm() {
 
         <Button
           onClick={handleCreate}
-          disabled={!homeTeam || !awayTeam || !startTime || !stake || isLoading}
+          disabled={!homeTeam || !awayTeam || !startTime || !stake || isSubmitting}
           className="w-full"
         >
-          {isLoading ? 'Creating...' : 'Create Bet'}
+          {isSubmitting ? 'Confirming…' : 'Create Bet'}
         </Button>
 
-        {isSuccess && (
-          <p className="text-sm text-green-600">Bet created successfully!</p>
-        )}
-        {isError && (
-          <div className="text-sm text-red-600">
-            Transaction failed.
-            {errorMessage && (
-              <pre className="whitespace-pre-wrap break-all mt-2">{errorMessage}</pre>
-            )}
+        {isMined && <p className="text-sm text-green-600">Bet created successfully!</p>}
+
+        {(errorMessage || mineError) && (
+          <div className="text-sm text-red-600 whitespace-pre-wrap break-all">
+            {errorMessage ?? (mineError as any)?.message}
           </div>
         )}
       </CardContent>

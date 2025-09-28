@@ -48,6 +48,6 @@ export async function GET(req: NextRequest) {
         });
     } catch (e) {
         console.error(e);
-        return new Response('Failed to fetch bet details', { status: 500 });
+        return Response.json({ error: 'Failed to fetch bet details' }, { status: 500 });
     }
 }
