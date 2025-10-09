@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useReadContract, useAccount } from 'wagmi';
 import PlaceBetForm from './PlaceBetForm';
 import SettleGameDialog from './SettleGameDialog';
+import OrganiserRating from './OrganiserRating';
+import RateOrganiser from './RateOrganiser';
+import RateOrganizerSection from './RateOrganizerSection';
 import { GAME_BET_ADDRESS, GAME_BET_ABI } from '@contracts/contracts';
 import { onBetsChanged } from '@/lib/events';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -141,6 +144,17 @@ export default function BetList() {
                 />
               )
             )}
+
+            <OrganiserRating organiser={bet.organiser as `0x${string}`} />
+            <RateOrganiser organiser={bet.organiser as `0x${string}`} betAddress={bet.address as `0x${string}`} />
+
+            {userAddress?.toLowerCase() !== bet.organiser.toLowerCase() && (
+                <RateOrganizerSection
+                    betAddress={bet.address as `0x${string}`}
+                    organiser={bet.organiser as `0x${string}`}
+                />
+            )}
+
           </CardContent>
         </Card>
       ))}
