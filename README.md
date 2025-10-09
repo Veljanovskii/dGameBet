@@ -89,7 +89,3 @@ Glavni pametni ugovor Đapp-a treba da obezbedi listanje aktivnih utakmica na ko
 kladi kao i utakmica koje su završene. Obezbediti da oni koji su se kladili mogu da ocenjuju
 organizatora klađenja.
 
-## 🤝 Contributing
-
-Pull requests are very welcome! For major changes, please open an issue first to discuss what you’d like to change.
-
