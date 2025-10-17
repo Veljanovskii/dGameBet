@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   description: 'Bet on football matches!',
 };
 
-
 export default function RootLayout({
   children,
 }: {
@@ -30,12 +29,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <WagmiProvider config={wagmiConfig}>
           <QueryProvider>
-            <RainbowKitProvider>
-              {children}
-            </RainbowKitProvider>
+            <RainbowKitProvider>{children}</RainbowKitProvider>
           </QueryProvider>
         </WagmiProvider>
       </body>

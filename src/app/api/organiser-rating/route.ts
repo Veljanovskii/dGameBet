@@ -10,7 +10,8 @@ const publicClient = createPublicClient({
 
 export async function GET(req: NextRequest) {
   const organiser = req.nextUrl.searchParams.get('organiser');
-  if (!organiser) return new Response('Missing organiser address', { status: 400 });
+  if (!organiser)
+    return new Response('Missing organiser address', { status: 400 });
 
   try {
     const rating = await publicClient.readContract({
@@ -21,7 +22,11 @@ export async function GET(req: NextRequest) {
     });
 
     // ratings returns a struct { active: bool, totalRate: uint, numberOfTimesRated: uint }
-    const [active, totalRate, numberOfTimesRated] = rating as [boolean, bigint, bigint];
+    const [active, totalRate, numberOfTimesRated] = rating as [
+      boolean,
+      bigint,
+      bigint,
+    ];
 
     const average =
       Number(numberOfTimesRated) > 0

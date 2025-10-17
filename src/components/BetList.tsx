@@ -32,7 +32,11 @@ export default function BetList() {
   const [bets, setBets] = useState<Bet[] | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: betAddresses, isLoading, refetch } = useReadContract({
+  const {
+    data: betAddresses,
+    isLoading,
+    refetch,
+  } = useReadContract({
     address: GAME_BET_ADDRESS,
     abi: GAME_BET_ABI,
     functionName: 'getBets',
@@ -44,7 +48,8 @@ export default function BetList() {
       const detailedBets: Bet[] = await Promise.all(
         betAddresses.map(async (betAddr: string) => {
           const res = await fetch(`/api/bet-details?address=${betAddr}`);
-          if (!res.ok) throw new Error(`Failed to fetch details for ${betAddr}`);
+          if (!res.ok)
+            throw new Error(`Failed to fetch details for ${betAddr}`);
           return await res.json();
         })
       );
@@ -83,7 +88,9 @@ export default function BetList() {
   }
 
   if (bets.length === 0) {
-    return <p className="text-center text-gray-400 mt-6">No active bets found.</p>;
+    return (
+      <p className="text-center text-gray-400 mt-6">No active bets found.</p>
+    );
   }
 
   return (
@@ -97,39 +104,61 @@ export default function BetList() {
       {bets.map((bet) => (
         <Card key={bet.address}>
           <CardHeader>
-            <CardTitle>{bet.homeTeam} vs {bet.awayTeam}</CardTitle>
+            <CardTitle>
+              {bet.homeTeam} vs {bet.awayTeam}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p><strong>Stake:</strong> {bet.stake} ETH</p>
-            <p><strong>Start Time:</strong> {new Date(bet.startTime * 1000).toLocaleString()}</p>
-            <p><strong>Organiser:</strong> {bet.organiser}</p>
+            <p>
+              <strong>Stake:</strong> {bet.stake} ETH
+            </p>
+            <p>
+              <strong>Start Time:</strong>{' '}
+              {new Date(bet.startTime * 1000).toLocaleString()}
+            </p>
+            <p>
+              <strong>Organiser:</strong> {bet.organiser}
+            </p>
 
             <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
               <div>
                 <p className="font-semibold text-blue-700">🏠 Home Team</p>
-                <p><strong>Bets:</strong> {bet.totalHomeBets}</p>
-                <p><strong>Pool:</strong> {bet.homeTeamPool} ETH</p>
+                <p>
+                  <strong>Bets:</strong> {bet.totalHomeBets}
+                </p>
+                <p>
+                  <strong>Pool:</strong> {bet.homeTeamPool} ETH
+                </p>
               </div>
               <div>
                 <p className="font-semibold text-red-700">🚩 Away Team</p>
-                <p><strong>Bets:</strong> {bet.totalAwayBets}</p>
-                <p><strong>Pool:</strong> {bet.awayTeamPool} ETH</p>
+                <p>
+                  <strong>Bets:</strong> {bet.totalAwayBets}
+                </p>
+                <p>
+                  <strong>Pool:</strong> {bet.awayTeamPool} ETH
+                </p>
               </div>
             </div>
 
-            <p><strong>Status:</strong> {
-              bet.isSettled
-                ? (bet.homeTeamGoals > bet.awayTeamGoals
-                    ? '✅ Game Settled – Home team won'
-                    : bet.homeTeamGoals < bet.awayTeamGoals
-                      ? '✅ Game Settled – Away team won'
-                      : '✅ Game Settled – Draw')
-                : (Date.now() >= bet.startTime * 1000 ? '🔴 Betting Closed' : '🟢 Betting Open')
-            }</p>
+            <p>
+              <strong>Status:</strong>{' '}
+              {bet.isSettled
+                ? bet.homeTeamGoals > bet.awayTeamGoals
+                  ? '✅ Game Settled – Home team won'
+                  : bet.homeTeamGoals < bet.awayTeamGoals
+                    ? '✅ Game Settled – Away team won'
+                    : '✅ Game Settled – Draw'
+                : Date.now() >= bet.startTime * 1000
+                  ? '🔴 Betting Closed'
+                  : '🟢 Betting Open'}
+            </p>
 
             {userAddress?.toLowerCase() === bet.organiser.toLowerCase() ? (
               <>
-                <p className="text-green-600 font-medium">You're the organiser!</p>
+                <p className="text-green-600 font-medium">
+                  You're the organiser!
+                </p>
                 {Date.now() >= bet.startTime * 1000 && !bet.isSettled && (
                   <SettleGameDialog betAddress={bet.address as `0x${string}`} />
                 )}
@@ -145,8 +174,10 @@ export default function BetList() {
             )}
 
             <OrganiserRating organiser={bet.organiser as `0x${string}`} />
-            <RateOrganiser organiser={bet.organiser as `0x${string}`} betAddress={bet.address as `0x${string}`} />
-
+            <RateOrganiser
+              organiser={bet.organiser as `0x${string}`}
+              betAddress={bet.address as `0x${string}`}
+            />
           </CardContent>
         </Card>
       ))}

@@ -17,7 +17,7 @@ export default function Home() {
           <div className="mt-4 text-white">
             Connected as: <span className="font-mono">{address}</span>
           </div>
-          <div className='mt-6'>
+          <div className="mt-6">
             <CreateBetForm />
             <BetList />
           </div>

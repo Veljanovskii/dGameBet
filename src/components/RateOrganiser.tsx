@@ -7,7 +7,11 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from 'wagmi';
-import { GAME_BET_ABI, GAME_BET_ADDRESS, FOOTBALL_GAME_BET_ABI } from '@contracts/contracts';
+import {
+  GAME_BET_ABI,
+  GAME_BET_ADDRESS,
+  FOOTBALL_GAME_BET_ABI,
+} from '@contracts/contracts';
 import { Button } from '@/components/ui/button';
 import { notifyBetsChanged } from '@/lib/events';
 
@@ -19,7 +23,7 @@ type Props = {
 export default function RateOrganiser({ organiser, betAddress }: Props) {
   const { address } = useAccount();
   const [rate, setRate] = useState<number>(0);
-  
+
   const {
     data: canVoteData,
     refetch: refetchCanVote,
@@ -57,23 +61,27 @@ export default function RateOrganiser({ organiser, betAddress }: Props) {
   const organiserOfBet = (organiserOfBetRaw as string | undefined) ?? '';
   const myBet = Number((myBetRaw as bigint | undefined) ?? 0n); // 0,1,2
   const gameStarted = useMemo(
-    () => (typeof startTime === 'bigint' ? Date.now() >= Number(startTime) * 1000 : false),
+    () =>
+      typeof startTime === 'bigint'
+        ? Date.now() >= Number(startTime) * 1000
+        : false,
     [startTime]
   );
 
   const { writeContract, data: hash, status, error } = useWriteContract();
-  const { isLoading: isMining, isSuccess: isMined } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isMining, isSuccess: isMined } =
+    useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     if (isMined) {
-      refetchCanVote();    // refresh eligibility
+      refetchCanVote(); // refresh eligibility
       notifyBetsChanged(); // let lists/cards refresh if they listen
     }
   }, [isMined, refetchCanVote]);
 
   // Normalize eligibility AFTER load
   const canVote =
-    !loadingCanVote && !fetchingCanVote ? (canVoteData === true) : undefined;
+    !loadingCanVote && !fetchingCanVote ? canVoteData === true : undefined;
 
   // One source of truth for “why not?” (only when not eligible)
   const whyNot = useMemo(() => {
@@ -84,19 +92,34 @@ export default function RateOrganiser({ organiser, betAddress }: Props) {
       return 'This organiser address doesn’t match the bet’s organiser.';
     }
     if (!gameStarted) return 'Voting opens after the game starts.';
-    if (myBet === 0) return 'You can only rate if you placed a bet on this match.';
-    if (canVote === false) return 'You may have already voted for this organiser on this match.';
+    if (myBet === 0)
+      return 'You can only rate if you placed a bet on this match.';
+    if (canVote === false)
+      return 'You may have already voted for this organiser on this match.';
     return null;
-  }, [address, loadingCanVote, fetchingCanVote, organiser, organiserOfBet, gameStarted, myBet, canVote]);
+  }, [
+    address,
+    loadingCanVote,
+    fetchingCanVote,
+    organiser,
+    organiserOfBet,
+    gameStarted,
+    myBet,
+    canVote,
+  ]);
 
   // Loading state
   if (!address || canVote === undefined) {
-    return <p className="text-xs text-gray-500">Checking voting eligibility…</p>;
+    return (
+      <p className="text-xs text-gray-500">Checking voting eligibility…</p>
+    );
   }
 
   // Not eligible => show ONLY the reason (prevents double-render with buttons)
   if (!canVote) {
-    return <p className="text-xs text-gray-500">{whyNot ?? 'You can’t rate now.'}</p>;
+    return (
+      <p className="text-xs text-gray-500">{whyNot ?? 'You can’t rate now.'}</p>
+    );
   }
 
   // Eligible => show the rating UI
@@ -128,7 +151,11 @@ export default function RateOrganiser({ organiser, betAddress }: Props) {
             {n}
           </Button>
         ))}
-        <Button onClick={submit} disabled={disabled || rate < 0} className="ml-2">
+        <Button
+          onClick={submit}
+          disabled={disabled || rate < 0}
+          className="ml-2"
+        >
           {disabled ? 'Submitting…' : 'Submit'}
         </Button>
       </div>

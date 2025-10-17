@@ -4,7 +4,13 @@ import { FOOTBALL_GAME_BET_ABI, GAME_BET_ABI } from '@contracts/contracts';
 import { GAME_BET_ADDRESS } from '@contracts/contracts';
 import { useAccount } from 'wagmi';
 
-function CanVoteDebug({ betAddress, organiser }: { betAddress: `0x${string}`, organiser: `0x${string}` }) {
+function CanVoteDebug({
+  betAddress,
+  organiser,
+}: {
+  betAddress: `0x${string}`;
+  organiser: `0x${string}`;
+}) {
   const { address } = useAccount();
 
   const runDebug = async () => {
@@ -39,12 +45,12 @@ function CanVoteDebug({ betAddress, organiser }: { betAddress: `0x${string}`, or
         args: [address],
       });
 
-      const ratingInfo = await client.readContract({
+      const ratingInfo = (await client.readContract({
         address: GAME_BET_ADDRESS as `0x${string}`,
         abi: GAME_BET_ABI,
         functionName: 'ratings',
         args: [organiser],
-      }) as { active: boolean, totalRate: bigint, numberOfTimesRated: bigint };
+      })) as { active: boolean; totalRate: bigint; numberOfTimesRated: bigint };
 
       const alreadyVoted = await client.readContract({
         address: GAME_BET_ADDRESS as `0x${string}`,
@@ -70,7 +76,15 @@ function CanVoteDebug({ betAddress, organiser }: { betAddress: `0x${string}`, or
       console.log('organiser param:', organiser);
       console.log('organiserOfBet():', organiserOfBet);
       console.log('ratings[organiser].active:', ratingInfo.active);
-      console.log('startTime:', Number(startTime), ' now:', nowSec, ' (started? ', nowSec >= Number(startTime), ')');
+      console.log(
+        'startTime:',
+        Number(startTime),
+        ' now:',
+        nowSec,
+        ' (started? ',
+        nowSec >= Number(startTime),
+        ')'
+      );
       console.log('myBet on this match:', Number(myBet)); // 0 none, 1 home, 2 away
       console.log('hasVoted[organiser][bet][you]:', alreadyVoted);
       console.log('FINAL canVote():', canVote);
@@ -81,17 +95,28 @@ function CanVoteDebug({ betAddress, organiser }: { betAddress: `0x${string}`, or
         if (address.toLowerCase() === (organiser as string).toLowerCase()) {
           alert('You are the organiser; organisers cannot vote.');
         } else if (!ratingInfo.active) {
-          alert('Organiser is not marked active (should be set when creating the match). Are you using the correct GameBet deployment?');
+          alert(
+            'Organiser is not marked active (should be set when creating the match). Are you using the correct GameBet deployment?'
+          );
         } else if (nowSec < Number(startTime)) {
-          alert('Match has not started yet on-chain. Voting opens once startTime has passed.');
-        } else if ((organiserOfBet as string).toLowerCase() !== (organiser as string).toLowerCase()) {
-          alert('The organiser you passed does not match FootballGameBet.organiser().');
+          alert(
+            'Match has not started yet on-chain. Voting opens once startTime has passed.'
+          );
+        } else if (
+          (organiserOfBet as string).toLowerCase() !==
+          (organiser as string).toLowerCase()
+        ) {
+          alert(
+            'The organiser you passed does not match FootballGameBet.organiser().'
+          );
         } else if (Number(myBet) === 0) {
           alert('Chain says you did not place a bet on this match address.');
         } else if (alreadyVoted) {
           alert('You have already voted for this organiser on this match.');
         } else {
-          alert('canVote() is false for an unexpected reason. See console for details.');
+          alert(
+            'canVote() is false for an unexpected reason. See console for details.'
+          );
         }
       } else {
         alert('canVote() is TRUE — you should be able to rate.');

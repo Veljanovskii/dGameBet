@@ -17,7 +17,9 @@ export default function CreateBetForm() {
   const [startTime, setStartTime] = useState('');
   const [stake, setStake] = useState('');
 
-  const unixStartTime = startTime ? Math.floor(new Date(startTime).getTime() / 1000) : 0;
+  const unixStartTime = startTime
+    ? Math.floor(new Date(startTime).getTime() / 1000)
+    : 0;
 
   const { writeContract, data: txHash, status, error } = useWriteContract();
   const {
@@ -91,12 +93,18 @@ export default function CreateBetForm() {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label>Home Team</Label>
-          <Input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} />
+          <Input
+            value={homeTeam}
+            onChange={(e) => setHomeTeam(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Away Team</Label>
-          <Input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} />
+          <Input
+            value={awayTeam}
+            onChange={(e) => setAwayTeam(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
@@ -120,13 +128,17 @@ export default function CreateBetForm() {
 
         <Button
           onClick={handleCreate}
-          disabled={!homeTeam || !awayTeam || !startTime || !stake || isSubmitting}
+          disabled={
+            !homeTeam || !awayTeam || !startTime || !stake || isSubmitting
+          }
           className="w-full"
         >
           {isSubmitting ? 'Confirming…' : 'Create Bet'}
         </Button>
 
-        {isMined && <p className="text-sm text-green-600">Bet created successfully!</p>}
+        {isMined && (
+          <p className="text-sm text-green-600">Bet created successfully!</p>
+        )}
 
         {(errorMessage || mineError) && (
           <div className="text-sm text-red-600 whitespace-pre-wrap break-all">

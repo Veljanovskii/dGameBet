@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAccount, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import {
+  useAccount,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from 'wagmi';
 import { FOOTBALL_GAME_BET_ABI } from '@contracts/contracts';
 import { parseEther } from 'viem';
 import { notifyBetsChanged } from '@/lib/events';
@@ -12,19 +16,26 @@ interface PlaceBetFormProps {
   startTime: number;
 }
 
-export default function PlaceBetForm({ betAddress, stake, startTime }: PlaceBetFormProps) {
+export default function PlaceBetForm({
+  betAddress,
+  stake,
+  startTime,
+}: PlaceBetFormProps) {
   const { address } = useAccount();
   const [hasBet, setHasBet] = useState<boolean | null>(null);
   const [pendingTeam, setPendingTeam] = useState<'home' | 'away' | null>(null);
 
   const { writeContractAsync, data: hash, status, error } = useWriteContract();
-  const { isLoading: isMining, isSuccess: isMined } = useWaitForTransactionReceipt({ hash });
+  const { isLoading: isMining, isSuccess: isMined } =
+    useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     const fetchUserBet = async () => {
       if (!address) return;
       try {
-        const res = await fetch(`/api/user-bet?betAddress=${betAddress}&user=${address}`);
+        const res = await fetch(
+          `/api/user-bet?betAddress=${betAddress}&user=${address}`
+        );
         if (!res.ok) throw new Error('Failed to read user bet');
         const data = await res.json();
         setHasBet(data.bet !== 0);
@@ -44,7 +55,12 @@ export default function PlaceBetForm({ betAddress, stake, startTime }: PlaceBetF
     }
   }, [isMined]);
 
-  const disabled = status === 'pending' || isMining || hasBet === null || hasBet || Date.now() >= startTime * 1000;
+  const disabled =
+    status === 'pending' ||
+    isMining ||
+    hasBet === null ||
+    hasBet ||
+    Date.now() >= startTime * 1000;
 
   const placeBet = async (team: 'home' | 'away') => {
     try {
@@ -63,15 +79,23 @@ export default function PlaceBetForm({ betAddress, stake, startTime }: PlaceBetF
   };
 
   if (hasBet === null) {
-    return <p className="text-sm text-gray-400">Checking if you’ve already bet…</p>;
+    return (
+      <p className="text-sm text-gray-400">Checking if you’ve already bet…</p>
+    );
   }
 
   if (hasBet) {
-    return <p className="text-green-600 font-medium">✅ You’ve placed a bet.</p>;
+    return (
+      <p className="text-green-600 font-medium">✅ You’ve placed a bet.</p>
+    );
   }
 
   if (Date.now() >= startTime * 1000) {
-    return <div className="text-sm text-red-400">⏱ Betting is closed for this match.</div>;
+    return (
+      <div className="text-sm text-red-400">
+        ⏱ Betting is closed for this match.
+      </div>
+    );
   }
 
   return (
@@ -81,14 +105,18 @@ export default function PlaceBetForm({ betAddress, stake, startTime }: PlaceBetF
         onClick={() => placeBet('home')}
         className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-white rounded-xl disabled:opacity-60"
       >
-        {pendingTeam === 'home' && (isMining || status === 'pending') ? 'Placing…' : 'Bet on Home'}
+        {pendingTeam === 'home' && (isMining || status === 'pending')
+          ? 'Placing…'
+          : 'Bet on Home'}
       </button>
       <button
         disabled={disabled}
         onClick={() => placeBet('away')}
         className="bg-red-600 hover:bg-red-700 px-4 py-2 text-white rounded-xl disabled:opacity-60"
       >
-        {pendingTeam === 'away' && (isMining || status === 'pending') ? 'Placing…' : 'Bet on Away'}
+        {pendingTeam === 'away' && (isMining || status === 'pending')
+          ? 'Placing…'
+          : 'Bet on Away'}
       </button>
     </div>
   );
