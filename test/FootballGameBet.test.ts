@@ -96,7 +96,8 @@ describe('FootballGameBet', function () {
 
   describe('Frontend View Helpers', function () {
     it('Counts home and away bets correctly', async function () {
-      const { footballGameBet, player1, player2, stake } = await loadFixture(deployFixture);
+      const { footballGameBet, player1, player2, stake } =
+        await loadFixture(deployFixture);
 
       await footballGameBet.connect(player1).betOnHomeTeam({ value: stake });
       await footballGameBet.connect(player2).betOnAwayTeam({ value: stake });
@@ -109,7 +110,8 @@ describe('FootballGameBet', function () {
     });
 
     it('Calculates home and away pools correctly', async function () {
-      const { footballGameBet, player1, player2, stake } = await loadFixture(deployFixture);
+      const { footballGameBet, player1, player2, stake } =
+        await loadFixture(deployFixture);
 
       await footballGameBet.connect(player1).betOnHomeTeam({ value: stake });
       await footballGameBet.connect(player2).betOnAwayTeam({ value: stake });

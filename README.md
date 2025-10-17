@@ -88,4 +88,3 @@ pobednički tim. Ukoliko je rezultat nerešen, sredstva treba da budu vraćena s
 Glavni pametni ugovor Đapp-a treba da obezbedi listanje aktivnih utakmica na koje može da se
 kladi kao i utakmica koje su završene. Obezbediti da oni koji su se kladili mogu da ocenjuju
 organizatora klađenja.
-

@@ -72,9 +72,11 @@ describe('GameBet', function () {
       await hre.network.provider.send('evm_mine');
 
       const expectedOrganiser = await footballGameBet.organiser();
-      
+
       expect(
-        await gameBet.connect(voter).canVote(expectedOrganiser, footballGameBetAddress)
+        await gameBet
+          .connect(voter)
+          .canVote(expectedOrganiser, footballGameBetAddress)
       ).to.be.true;
 
       await gameBet
