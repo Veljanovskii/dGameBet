@@ -1,0 +1,254 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useReadContract, useAccount } from 'wagmi';
+import { GAME_BET_ABI, GAME_BET_ADDRESS } from '@contracts/contracts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import PlaceBetForm from './PlaceBetForm';
+import SettleGameDialog from './SettleGameDialog';
+import OrganiserRating from './OrganiserRating';
+import RateOrganiser from './RateOrganiser';
+import { onBetsChanged } from '@/lib/events';
+
+type Bet = {
+  address: string;
+  homeTeam: string;
+  awayTeam: string;
+  stake: string;
+  startTime: number;
+  organiser: string;
+  totalHomeBets: number;
+  totalAwayBets: number;
+  homeTeamPool: string;
+  awayTeamPool: string;
+  homeTeamGoals: number;
+  awayTeamGoals: number;
+  isSettled: boolean;
+};
+
+type Props = {
+  mode: 'upcoming' | 'started' | 'history'; // filter by status
+};
+
+const PAGE_SIZE = 10;
+
+export default function MatchesList({ mode }: Props) {
+  const { address: userAddress } = useAccount();
+  const [bets, setBets] = useState<Bet[] | null>(null);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: betAddresses, isLoading, refetch } = useReadContract({
+    address: GAME_BET_ADDRESS,
+    abi: GAME_BET_ABI,
+    functionName: 'getBets',
+  });
+
+  const fetchDetails = useCallback(async () => {
+    if (!betAddresses || !Array.isArray(betAddresses)) return;
+    try {
+      const detailedBets: Bet[] = await Promise.all(
+        betAddresses.map(async (betAddr: string) => {
+          const res = await fetch(`/api/bet-details?address=${betAddr}`);
+          if (!res.ok) throw new Error(`Failed to fetch details for ${betAddr}`);
+          return await res.json();
+        })
+      );
+      setBets(detailedBets);
+    } catch (e) {
+      console.error('Failed to fetch bet details', e);
+    }
+  }, [betAddresses]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
+
+  useEffect(() => {
+    const off = onBetsChanged(async () => {
+      setIsRefreshing(true);
+      try {
+        await refetch();
+        await fetchDetails();
+      } finally {
+        setIsRefreshing(false);
+      }
+    });
+    return off;
+  }, [refetch, fetchDetails]);
+
+  const filtered = useMemo(() => {
+    if (!bets) return [];
+    const now = Date.now();
+
+    const statusFilter = bets.filter((b) => {
+      const hasStarted = now >= b.startTime * 1000;
+      if (mode === 'upcoming') return !hasStarted && !b.isSettled;
+      if (mode === 'started') return hasStarted && !b.isSettled;
+      return b.isSettled;
+    });
+
+    const searched =
+      search.trim().length >= 2
+        ? statusFilter.filter((b) => {
+            const q = search.toLowerCase();
+            return (
+              b.homeTeam.toLowerCase().includes(q) ||
+              b.awayTeam.toLowerCase().includes(q)
+            );
+          })
+        : statusFilter;
+
+    const sorted = [...searched].sort((a, b) =>
+      sort === 'asc' ? a.startTime - b.startTime : b.startTime - a.startTime
+    );
+
+    return sorted;
+  }, [bets, mode, search, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [mode, search, sort]);
+
+  if (isLoading || bets === null) {
+    return (
+      <div className="space-y-4 mt-8 max-w-5xl mx-auto">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-xl w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1">Search by team</label>
+          <input
+            className="w-full border rounded-md px-3 py-2"
+            placeholder="Min 2 characters..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Sort by start time</label>
+          <select
+            className="border rounded-md px-3 py-2"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
+          >
+            <option value="asc">Ascending (earliest first)</option>
+            <option value="desc">Descending (latest first)</option>
+          </select>
+        </div>
+      </div>
+
+      {isRefreshing && (
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      )}
+
+      {paged.length === 0 ? (
+        <p className="text-center text-gray-500 mt-6">No matches found.</p>
+      ) : (
+        <div className="space-y-4 mt-2">
+          {paged.map((bet) => {
+            const now = Date.now();
+            const hasStarted = now >= bet.startTime * 1000;
+            const status = bet.isSettled
+              ? bet.homeTeamGoals > bet.awayTeamGoals
+                ? '✅ Game Settled – Home team won'
+                : bet.homeTeamGoals < bet.awayTeamGoals
+                  ? '✅ Game Settled – Away team won'
+                  : '✅ Game Settled – Draw'
+              : hasStarted
+                ? '🔴 Betting Closed'
+                : '🟢 Betting Open';
+
+            return (
+              <Card key={bet.address}>
+                <CardHeader>
+                  <CardTitle>
+                    {bet.homeTeam} vs {bet.awayTeam}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p><strong>Stake:</strong> {bet.stake} ETH</p>
+                  <p><strong>Start Time:</strong> {new Date(bet.startTime * 1000).toLocaleString()}</p>
+                  <p><strong>Organiser:</strong> {bet.organiser}</p>
+
+                  <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
+                    <div>
+                      <p className="font-semibold text-blue-700">🏠 Home Team</p>
+                      <p><strong>Bets:</strong> {bet.totalHomeBets}</p>
+                      <p><strong>Pool:</strong> {bet.homeTeamPool} ETH</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-red-700">🚩 Away Team</p>
+                      <p><strong>Bets:</strong> {bet.totalAwayBets}</p>
+                      <p><strong>Pool:</strong> {bet.awayTeamPool} ETH</p>
+                    </div>
+                  </div>
+
+                  <p><strong>Status:</strong> {status}</p>
+
+                  {userAddress?.toLowerCase() === bet.organiser.toLowerCase() ? (
+                    <>
+                      <p className="text-green-600 font-medium">You're the organiser!</p>
+                      {hasStarted && !bet.isSettled && (
+                        <SettleGameDialog betAddress={bet.address as `0x${string}`} />
+                      )}
+                    </>
+                  ) : (
+                    !hasStarted && (
+                      <PlaceBetForm
+                        betAddress={bet.address as `0x${string}`}
+                        stake={bet.stake}
+                        startTime={bet.startTime}
+                      />
+                    )
+                  )}
+
+                  <OrganiserRating organiser={bet.organiser as `0x${string}`} />
+                  <RateOrganiser organiser={bet.organiser as `0x${string}`} betAddress={bet.address as `0x${string}`} />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex items-center justify-center gap-2 pt-2">
+        <button
+          className="px-3 py-1 border rounded disabled:opacity-50"
+          disabled={currentPage <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          Prev
+        </button>
+        <span className="text-sm">
+          Page {currentPage} / {totalPages}
+        </span>
+        <button
+          className="px-3 py-1 border rounded disabled:opacity-50"
+          disabled={currentPage >= totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}

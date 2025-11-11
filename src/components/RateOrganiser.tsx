@@ -74,16 +74,14 @@ export default function RateOrganiser({ organiser, betAddress }: Props) {
 
   useEffect(() => {
     if (isMined) {
-      refetchCanVote(); // refresh eligibility
-      notifyBetsChanged(); // let lists/cards refresh if they listen
+      refetchCanVote();
+      notifyBetsChanged();
     }
   }, [isMined, refetchCanVote]);
 
-  // Normalize eligibility AFTER load
   const canVote =
     !loadingCanVote && !fetchingCanVote ? canVoteData === true : undefined;
 
-  // One source of truth for “why not?” (only when not eligible)
   const whyNot = useMemo(() => {
     if (!address) return 'Connect a wallet to vote.';
     if (loadingCanVote || fetchingCanVote) return 'Checking eligibility…';
@@ -91,7 +89,7 @@ export default function RateOrganiser({ organiser, betAddress }: Props) {
     if (organiser.toLowerCase() !== organiserOfBet.toLowerCase()) {
       return 'This organiser address doesn’t match the bet’s organiser.';
     }
-    if (!gameStarted) return 'Voting opens after the game starts.';
+    if (!gameStarted) return 'Voting opens after the game ends.';
     if (myBet === 0)
       return 'You can only rate if you placed a bet on this match.';
     if (canVote === false)
