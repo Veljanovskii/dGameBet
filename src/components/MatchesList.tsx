@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useReadContract, useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { GAME_BET_ABI, GAME_BET_ADDRESS } from '@contracts/contracts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,16 +28,16 @@ type Bet = {
 };
 
 type Props = {
-  mode: 'upcoming' | 'started' | 'history'; // filter by status
+  status: 'upcoming' | 'started' | 'history';
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 3;
 
-export default function MatchesList({ mode }: Props) {
+export default function MatchesList({ status }: Props) {
   const { address: userAddress } = useAccount();
-  const [bets, setBets] = useState<Bet[] | null>(null);
+  const [bets, setBets] = useState<Bet[]>([]);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<'asc' | 'desc'>('asc');
+  const [sort, setSort] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -47,19 +47,25 @@ export default function MatchesList({ mode }: Props) {
     functionName: 'getBets',
   });
 
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
   const fetchDetails = useCallback(async () => {
     if (!betAddresses || !Array.isArray(betAddresses)) return;
     try {
-      const detailedBets: Bet[] = await Promise.all(
-        betAddresses.map(async (betAddr: string) => {
-          const res = await fetch(`/api/bet-details?address=${betAddr}`);
-          if (!res.ok) throw new Error(`Failed to fetch details for ${betAddr}`);
-          return await res.json();
-        })
-      );
-      setBets(detailedBets);
+      const addresses = (betAddresses as string[]).slice();
+      const query = addresses.map(a => `addresses=${a}`).join('&');
+
+      const res = await fetch(`/api/bet-details-batch?${query}`);
+      if (!res.ok) throw new Error('Failed to fetch details batch');
+      const data = await res.json();
+
+      setBets(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error('Failed to fetch bet details', e);
+      console.error('details batch failed:', e);
     }
   }, [betAddresses]);
 
@@ -80,44 +86,49 @@ export default function MatchesList({ mode }: Props) {
     return off;
   }, [refetch, fetchDetails]);
 
+  // ---------- Filtering, searching, sorting ----------
   const filtered = useMemo(() => {
-    if (!bets) return [];
     const now = Date.now();
 
-    const statusFilter = bets.filter((b) => {
-      const hasStarted = now >= b.startTime * 1000;
-      if (mode === 'upcoming') return !hasStarted && !b.isSettled;
-      if (mode === 'started') return hasStarted && !b.isSettled;
+    const statusFiltered = bets.filter(b => {
+      const started = now >= b.startTime * 1000;
+      if (status === 'upcoming') return !started && !b.isSettled;
+      if (status === 'started') return started && !b.isSettled;
       return b.isSettled;
     });
 
     const searched =
-      search.trim().length >= 2
-        ? statusFilter.filter((b) => {
-            const q = search.toLowerCase();
+      debouncedSearch.trim().length >= 2
+        ? statusFiltered.filter(b => {
+            const q = debouncedSearch.toLowerCase();
             return (
               b.homeTeam.toLowerCase().includes(q) ||
               b.awayTeam.toLowerCase().includes(q)
             );
           })
-        : statusFilter;
+        : statusFiltered;
 
     const sorted = [...searched].sort((a, b) =>
       sort === 'asc' ? a.startTime - b.startTime : b.startTime - a.startTime
     );
 
     return sorted;
-  }, [bets, mode, search, sort]);
+  }, [bets, status, debouncedSearch, sort]);
 
+  // ---------- Pagination ----------
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paged = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   useEffect(() => {
     setPage(1);
-  }, [mode, search, sort]);
+  }, [status, debouncedSearch, sort]);
 
-  if (isLoading || bets === null) {
+  // ---------- Loading ----------
+  if (isLoading || bets.length === 0) {
     return (
       <div className="space-y-4 mt-8 max-w-5xl mx-auto">
         {[...Array(3)].map((_, i) => (
@@ -127,6 +138,7 @@ export default function MatchesList({ mode }: Props) {
     );
   }
 
+  // ---------- Render ----------
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -136,7 +148,7 @@ export default function MatchesList({ mode }: Props) {
             className="w-full border rounded-md px-3 py-2"
             placeholder="Min 2 characters..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
 
@@ -145,7 +157,7 @@ export default function MatchesList({ mode }: Props) {
           <select
             className="border rounded-md px-3 py-2"
             value={sort}
-            onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
+            onChange={e => setSort(e.target.value as 'asc' | 'desc')}
           >
             <option value="asc">Ascending (earliest first)</option>
             <option value="desc">Descending (latest first)</option>
@@ -164,16 +176,16 @@ export default function MatchesList({ mode }: Props) {
         <p className="text-center text-gray-500 mt-6">No matches found.</p>
       ) : (
         <div className="space-y-4 mt-2">
-          {paged.map((bet) => {
+          {paged.map(bet => {
             const now = Date.now();
-            const hasStarted = now >= bet.startTime * 1000;
-            const status = bet.isSettled
+            const started = now >= bet.startTime * 1000;
+            const statusText = bet.isSettled
               ? bet.homeTeamGoals > bet.awayTeamGoals
                 ? '✅ Game Settled – Home team won'
                 : bet.homeTeamGoals < bet.awayTeamGoals
                   ? '✅ Game Settled – Away team won'
                   : '✅ Game Settled – Draw'
-              : hasStarted
+              : started
                 ? '🔴 Betting Closed'
                 : '🟢 Betting Open';
 
@@ -202,17 +214,17 @@ export default function MatchesList({ mode }: Props) {
                     </div>
                   </div>
 
-                  <p><strong>Status:</strong> {status}</p>
+                  <p><strong>Status:</strong> {statusText}</p>
 
                   {userAddress?.toLowerCase() === bet.organiser.toLowerCase() ? (
                     <>
                       <p className="text-green-600 font-medium">You're the organiser!</p>
-                      {hasStarted && !bet.isSettled && (
+                      {started && !bet.isSettled && (
                         <SettleGameDialog betAddress={bet.address as `0x${string}`} />
                       )}
                     </>
                   ) : (
-                    !hasStarted && (
+                    !started && (
                       <PlaceBetForm
                         betAddress={bet.address as `0x${string}`}
                         stake={bet.stake}
@@ -234,7 +246,7 @@ export default function MatchesList({ mode }: Props) {
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
           disabled={currentPage <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage(p => Math.max(1, p - 1))}
         >
           Prev
         </button>
@@ -244,7 +256,7 @@ export default function MatchesList({ mode }: Props) {
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
           disabled={currentPage >= totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
         >
           Next
         </button>
