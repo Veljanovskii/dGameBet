@@ -11,22 +11,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function CreateBetForm() {
+type Props = {
+  onSuccess?: () => void;
+};
+
+export default function CreateBetForm({ onSuccess }: Props) {
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
   const [startTime, setStartTime] = useState('');
   const [stake, setStake] = useState('');
 
-  const unixStartTime = startTime
-    ? Math.floor(new Date(startTime).getTime() / 1000)
-    : 0;
+  const unixStartTime = startTime ? Math.floor(new Date(startTime).getTime() / 1000) : 0;
 
   const { writeContract, data: txHash, status, error } = useWriteContract();
-  const {
-    isLoading: isMining,
-    isSuccess: isMined,
-    error: mineError,
-  } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isMining, isSuccess: isMined, error: mineError } =
+    useWaitForTransactionReceipt({ hash: txHash });
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const errorLogged = useRef(false);
@@ -40,9 +39,7 @@ export default function CreateBetForm() {
       if (typeof error === 'object' && error !== null) {
         if ('message' in error) msg = (error as any).message;
         else msg = JSON.stringify(error);
-      } else if (typeof error === 'string') {
-        msg = error;
-      }
+      } else if (typeof error === 'string') msg = error;
       setErrorMessage(msg);
       errorLogged.current = true;
     } else if (!isError) {
@@ -51,6 +48,7 @@ export default function CreateBetForm() {
     }
   }, [status, error]);
 
+  // When mined: reset form, notify, and close the dialog if provided
   useEffect(() => {
     if (isMined) {
       notifyBetsChanged();
@@ -58,17 +56,23 @@ export default function CreateBetForm() {
       setAwayTeam('');
       setStartTime('');
       setStake('');
+      onSuccess?.();
     }
-  }, [isMined]);
+  }, [isMined, onSuccess]);
 
   const handleCreate = () => {
     if (!homeTeam || !awayTeam || unixStartTime <= 0 || !stake) return;
 
-    let stakeValue;
+    let stakeValue: bigint;
     try {
       stakeValue = parseEther(stake);
     } catch {
       setErrorMessage('Invalid stake value');
+      return;
+    }
+
+    if (unixStartTime <= Math.floor(Date.now() / 1000)) {
+      setErrorMessage('Start time must be in the future.');
       return;
     }
 
@@ -86,59 +90,36 @@ export default function CreateBetForm() {
   };
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Create Football Bet</CardTitle>
+    <Card className="border-0 shadow-none p-0">
+      {/* optional header kept for structure; no extra borders */}
+      <CardHeader className="px-0 pt-0">
+        <CardTitle className="text-base"></CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+
+      <CardContent className="px-0 space-y-4">
         <div className="space-y-2">
           <Label>Home Team</Label>
-          <Input
-            value={homeTeam}
-            onChange={(e) => setHomeTeam(e.target.value)}
-          />
+          <Input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} />
         </div>
 
         <div className="space-y-2">
           <Label>Away Team</Label>
-          <Input
-            value={awayTeam}
-            onChange={(e) => setAwayTeam(e.target.value)}
-          />
+          <Input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} />
         </div>
 
         <div className="space-y-2">
           <Label>Start Time</Label>
-          <Input
-            type="datetime-local"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
+          <Input type="datetime-local" value={startTime} min={new Date().toISOString().slice(0, 16)} onChange={(e) => setStartTime(e.target.value)} />
         </div>
 
         <div className="space-y-2">
           <Label>Stake (ETH)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={stake}
-            onChange={(e) => setStake(e.target.value)}
-          />
+          <Input type="number" step="0.01" value={stake} onChange={(e) => setStake(e.target.value)} />
         </div>
 
-        <Button
-          onClick={handleCreate}
-          disabled={
-            !homeTeam || !awayTeam || !startTime || !stake || isSubmitting
-          }
-          className="w-full"
-        >
+        <Button onClick={handleCreate} disabled={!homeTeam || !awayTeam || !startTime || !stake || isSubmitting} className="w-full">
           {isSubmitting ? 'Confirming…' : 'Create Bet'}
         </Button>
-
-        {isMined && (
-          <p className="text-sm text-green-600">Bet created successfully!</p>
-        )}
 
         {(errorMessage || mineError) && (
           <div className="text-sm text-red-600 whitespace-pre-wrap break-all">

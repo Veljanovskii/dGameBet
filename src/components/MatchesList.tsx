@@ -47,44 +47,48 @@ export default function MatchesList({ status }: Props) {
     functionName: 'getBets',
   });
 
+  // Debounce search
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timeout);
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
   }, [search]);
 
-  const fetchDetails = useCallback(async () => {
-    if (!betAddresses || !Array.isArray(betAddresses)) return;
+  // ---- Fetch details (accepts addresses explicitly to avoid stale closures) ----
+  const fetchDetails = useCallback(async (addresses: string[]) => {
+    if (!addresses?.length) {
+      setBets([]);
+      return;
+    }
     try {
-      const addresses = (betAddresses as string[]).slice();
       const query = addresses.map(a => `addresses=${a}`).join('&');
-
       const res = await fetch(`/api/bet-details-batch?${query}`);
       if (!res.ok) throw new Error('Failed to fetch details batch');
       const data = await res.json();
-
       setBets(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error('details batch failed:', e);
     }
-  }, [betAddresses]);
+  }, []);
 
   useEffect(() => {
-    fetchDetails();
-  }, [fetchDetails]);
+    const addrs = (betAddresses as string[] | undefined) ?? [];
+    fetchDetails(addrs);
+  }, [betAddresses, fetchDetails]);
 
   useEffect(() => {
     const off = onBetsChanged(async () => {
       setIsRefreshing(true);
       try {
-        await refetch();
-        await fetchDetails();
+        const { data } = await refetch();
+        const fresh = (data as string[] | undefined) ?? ((betAddresses as string[]) ?? []);
+        await fetchDetails(fresh);
       } finally {
         setIsRefreshing(false);
       }
     });
     return off;
-  }, [refetch, fetchDetails]);
+  }, [refetch, fetchDetails, betAddresses]);
 
   // ---------- Filtering, searching, sorting ----------
   const filtered = useMemo(() => {
@@ -128,7 +132,7 @@ export default function MatchesList({ status }: Props) {
   }, [status, debouncedSearch, sort]);
 
   // ---------- Loading ----------
-  if (isLoading || bets.length === 0) {
+  if (isLoading && bets.length === 0) {
     return (
       <div className="space-y-4 mt-8 max-w-5xl mx-auto">
         {[...Array(3)].map((_, i) => (
@@ -242,6 +246,7 @@ export default function MatchesList({ status }: Props) {
         </div>
       )}
 
+      {/* Pagination */}
       <div className="flex items-center justify-center gap-2 pt-2">
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
