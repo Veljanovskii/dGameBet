@@ -24,6 +24,9 @@ contract GameBet {
             FootballGameBet newBet = new FootballGameBet(homeTeam, awayTeam, startTime, stake, payable(msg.sender));
             allBets.push(address(newBet));
 
+            MarketsBet markets = new MarketsBet(payable(msg.sender), startTime, stake);
+            newBet.setMarkets(address(markets));
+
             if (!ratings[msg.sender].active) {
                 ratings[msg.sender].active = true;
                 organisers.push(msg.sender);

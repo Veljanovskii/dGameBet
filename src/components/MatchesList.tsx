@@ -9,6 +9,7 @@ import PlaceBetForm from './PlaceBetForm';
 import SettleGameDialog from './SettleGameDialog';
 import OrganiserRating from './OrganiserRating';
 import RateOrganiser from './RateOrganiser';
+import MarketsSection from './MarketsSection';
 import { onBetsChanged } from '@/lib/events';
 
 type Bet = {
@@ -54,7 +55,6 @@ export default function MatchesList({ status }: Props) {
     return () => clearTimeout(t);
   }, [search]);
 
-  // ---- Fetch details (accepts addresses explicitly to avoid stale closures) ----
   const fetchDetails = useCallback(async (addresses: string[]) => {
     if (!addresses?.length) {
       setBets([]);
@@ -193,6 +193,8 @@ export default function MatchesList({ status }: Props) {
                 ? '🔴 Betting Closed'
                 : '🟢 Betting Open';
 
+            const isOrganiser = userAddress?.toLowerCase() === bet.organiser.toLowerCase();
+
             return (
               <Card key={bet.address}>
                 <CardHeader>
@@ -220,7 +222,7 @@ export default function MatchesList({ status }: Props) {
 
                   <p><strong>Status:</strong> {statusText}</p>
 
-                  {userAddress?.toLowerCase() === bet.organiser.toLowerCase() ? (
+                  {isOrganiser ? (
                     <>
                       <p className="text-green-600 font-medium">You're the organiser!</p>
                       {started && !bet.isSettled && (
@@ -229,11 +231,20 @@ export default function MatchesList({ status }: Props) {
                     </>
                   ) : (
                     !started && (
-                      <PlaceBetForm
-                        betAddress={bet.address as `0x${string}`}
-                        stake={bet.stake}
-                        startTime={bet.startTime}
-                      />
+                      <>
+                        {/* Primary 1X2 market (home/away) */}
+                        <PlaceBetForm
+                          betAddress={bet.address as `0x${string}`}
+                          stake={bet.stake}
+                          startTime={bet.startTime}
+                        />
+                        {/* NEW: side markets (UG 0–2, UG 3+, GG) */}
+                        <MarketsSection
+                          betAddress={bet.address as `0x${string}`}
+                          stake={bet.stake}
+                          startTime={bet.startTime}
+                        />
+                      </>
                     )
                   )}
 
