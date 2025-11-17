@@ -64,8 +64,6 @@ contract FootballGameBet {
     }
 
     function gameFinished(uint8 homeGoals, uint8 awayGoals) external onlyOrganiser {
-        require(address(this).balance > 0, "Contract balance empty.");
-
         homeTeamGoals = homeGoals;
         awayTeamGoals = awayGoals;
         isSettled = true;
@@ -73,34 +71,37 @@ contract FootballGameBet {
         uint8 winner = homeGoals > awayGoals ? 1 : (awayGoals > homeGoals ? 2 : 0);
 
         uint256 totalPool = address(this).balance;
-        if (winner == 0) {
-            for (uint256 i = 0; i < players.length; i++) {
-                (bool refunded, ) = players[i].call{value: stake}("");
-                require(refunded, "Refund failed.");
-            }
-        } else {
-            uint256 organiserFee = (totalPool * 5) / 100;
-            uint256 winningAmount = totalPool - organiserFee;
-            uint256 numOfWinners;
-
-            for (uint256 i = 0; i < players.length; i++) {
-                if (bets[players[i]] == winner) {
-                    numOfWinners++;
+        if (totalPool > 0) {
+            if (winner == 0) {
+                // refund all main-bet players
+                for (uint256 i = 0; i < players.length; i++) {
+                    (bool refunded, ) = players[i].call{value: stake}("");
+                    require(refunded, "Refund failed.");
                 }
-            }
-            uint256 payoutPerWinner = numOfWinners == 0 ? 0 : (winningAmount / numOfWinners);
+            } else {
+                uint256 organiserFee = (totalPool * 5) / 100;
+                uint256 winningAmount = totalPool - organiserFee;
 
-            for (uint256 i = 0; i < players.length; i++) {
-                if (bets[players[i]] == winner) {
-                    (bool success, ) = players[i].call{value: payoutPerWinner}("");
-                    require(success, "Payout failed.");
+                uint256 numOfWinners;
+                for (uint256 i = 0; i < players.length; i++) {
+                    if (bets[players[i]] == winner) numOfWinners++;
                 }
-            }
 
-            (bool organiserPaid, ) = organiser.call{value: organiserFee}("");
-            require(organiserPaid, "Organizer payout failed.");
+                if (numOfWinners > 0) {
+                    uint256 payoutPerWinner = winningAmount / numOfWinners;
+                    for (uint256 i = 0; i < players.length; i++) {
+                        if (bets[players[i]] == winner) {
+                            (bool ok, ) = players[i].call{value: payoutPerWinner}("");
+                            require(ok, "Payout failed.");
+                        }
+                    }
+                }
+
+                (bool feeOk, ) = organiser.call{value: organiserFee}("");
+                require(feeOk, "Organizer payout failed.");
+            }
         }
-
+        // Settle side markets if applicable
         if (markets != address(0)) {
             MarketsBet(markets).settleAll(homeGoals, awayGoals);
         }

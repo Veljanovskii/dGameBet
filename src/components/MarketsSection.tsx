@@ -173,7 +173,7 @@ export default function MarketsSection({ betAddress, stake, startTime }: Props) 
           onClick={() => place('betGG', 'GG')}
           title={hasGG ? 'Already placed a bet on GG' : undefined}
         >
-          {pending === 'GG' && (mining || status === 'pending') ? 'Placing…' : 'GG (both score)'}
+          {pending === 'GG' && (mining || status === 'pending') ? 'Placing…' : 'GG'}
         </Button>
       </div>
 

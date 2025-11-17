@@ -9,6 +9,7 @@ contract MarketsBet {
     }
 
     address payable public organiser;
+    address public matchContract;
     uint256 public startTime;
     uint256 public stake;
     bool public isSettled;
@@ -20,14 +21,16 @@ contract MarketsBet {
     event MarketSettled(Market indexed market, uint256 winners, uint256 totalPool, uint256 organiserFee);
     event AllMarketsSettled(uint8 homeGoals, uint8 awayGoals);
 
-    constructor(address payable _organiser, uint256 _startTime, uint256 _stake) {
+    constructor(address payable _organiser, uint256 _startTime, uint256 _stake, address _matchContract) {
         require(_organiser != address(0), "Invalid organiser");
+        require(_matchContract != address(0), "Invalid match");
         require(_startTime > block.timestamp, "Invalid startTime");
         require(_stake > 0, "Stake must be positive");
 
         organiser = _organiser;
         startTime = _startTime;
         stake = _stake;
+        matchContract = _matchContract;
     }
 
     // -------- Betting --------
@@ -66,7 +69,7 @@ contract MarketsBet {
 
     // -------- Settlement --------
     
-    function settleAll(uint8 homeGoals, uint8 awayGoals) external onlyOrganiser {
+    function settleAll(uint8 homeGoals, uint8 awayGoals) external onlyOrganiserOrMatch {
         require(!isSettled, "Markets already settled");
         // optional: require(address(this).balance > 0, "No funds");
 
@@ -139,6 +142,11 @@ contract MarketsBet {
 
     modifier onlyOrganiser() {
         require(msg.sender == organiser, "Only organiser");
+        _;
+    }
+
+    modifier onlyOrganiserOrMatch() {
+        require(msg.sender == organiser || msg.sender == matchContract, "Not authorised");
         _;
     }
 }

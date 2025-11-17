@@ -24,7 +24,7 @@ contract GameBet {
             FootballGameBet newBet = new FootballGameBet(homeTeam, awayTeam, startTime, stake, payable(msg.sender));
             allBets.push(address(newBet));
 
-            MarketsBet markets = new MarketsBet(payable(msg.sender), startTime, stake);
+            MarketsBet markets = new MarketsBet(payable(msg.sender), startTime, stake, address(newBet));
             newBet.setMarkets(address(markets));
 
             if (!ratings[msg.sender].active) {
@@ -47,8 +47,8 @@ contract GameBet {
 
         FootballGameBet gameBet = FootballGameBet(payable(bet));
 
-        if (block.timestamp < gameBet.startTime()) return false;
         if (gameBet.organiser() != organiser) return false;
+        if (!gameBet.getIsSettled()) return false;
         if (gameBet.bets(msg.sender) == 0) return false;
         if (hasVoted[organiser][bet][msg.sender]) return false;
 
