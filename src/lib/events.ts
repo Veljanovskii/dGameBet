@@ -9,7 +9,9 @@ export const onBetsChanged = (handler: () => void) => {
 };
 
 export const notifyBetClosed = (betAddress: string) =>
-  window.dispatchEvent(new CustomEvent<BetClosedDetail>('bet:closed', { detail: { betAddress } }));
+  window.dispatchEvent(
+    new CustomEvent<BetClosedDetail>('bet:closed', { detail: { betAddress } })
+  );
 
 export const onBetClosed = (handler: (betAddress: string) => void) => {
   const listener = (e: Event) => {
@@ -17,5 +19,6 @@ export const onBetClosed = (handler: (betAddress: string) => void) => {
     if (ce?.detail?.betAddress) handler(ce.detail.betAddress);
   };
   window.addEventListener('bet:closed', listener as EventListener);
-  return () => window.removeEventListener('bet:closed', listener as EventListener);
+  return () =>
+    window.removeEventListener('bet:closed', listener as EventListener);
 };

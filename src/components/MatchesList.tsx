@@ -42,7 +42,11 @@ export default function MatchesList({ status }: Props) {
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: betAddresses, isLoading, refetch } = useReadContract({
+  const {
+    data: betAddresses,
+    isLoading,
+    refetch,
+  } = useReadContract({
     address: GAME_BET_ADDRESS,
     abi: GAME_BET_ABI,
     functionName: 'getBets',
@@ -61,7 +65,7 @@ export default function MatchesList({ status }: Props) {
       return;
     }
     try {
-      const query = addresses.map(a => `addresses=${a}`).join('&');
+      const query = addresses.map((a) => `addresses=${a}`).join('&');
       const res = await fetch(`/api/bet-details-batch?${query}`);
       if (!res.ok) throw new Error('Failed to fetch details batch');
       const data = await res.json();
@@ -81,7 +85,8 @@ export default function MatchesList({ status }: Props) {
       setIsRefreshing(true);
       try {
         const { data } = await refetch();
-        const fresh = (data as string[] | undefined) ?? ((betAddresses as string[]) ?? []);
+        const fresh =
+          (data as string[] | undefined) ?? (betAddresses as string[]) ?? [];
         await fetchDetails(fresh);
       } finally {
         setIsRefreshing(false);
@@ -94,7 +99,7 @@ export default function MatchesList({ status }: Props) {
   const filtered = useMemo(() => {
     const now = Date.now();
 
-    const statusFiltered = bets.filter(b => {
+    const statusFiltered = bets.filter((b) => {
       const started = now >= b.startTime * 1000;
       if (status === 'upcoming') return !started && !b.isSettled;
       if (status === 'started') return started && !b.isSettled;
@@ -103,7 +108,7 @@ export default function MatchesList({ status }: Props) {
 
     const searched =
       debouncedSearch.trim().length >= 2
-        ? statusFiltered.filter(b => {
+        ? statusFiltered.filter((b) => {
             const q = debouncedSearch.toLowerCase();
             return (
               b.homeTeam.toLowerCase().includes(q) ||
@@ -147,21 +152,25 @@ export default function MatchesList({ status }: Props) {
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
-          <label className="block text-sm font-medium mb-1">Search by team</label>
+          <label className="block text-sm font-medium mb-1">
+            Search by team
+          </label>
           <input
             className="w-full border rounded-md px-3 py-2"
             placeholder="Min 2 characters..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Sort by start time</label>
+          <label className="block text-sm font-medium mb-1">
+            Sort by start time
+          </label>
           <select
             className="border rounded-md px-3 py-2"
             value={sort}
-            onChange={e => setSort(e.target.value as 'asc' | 'desc')}
+            onChange={(e) => setSort(e.target.value as 'asc' | 'desc')}
           >
             <option value="asc">Ascending (earliest first)</option>
             <option value="desc">Descending (latest first)</option>
@@ -180,7 +189,7 @@ export default function MatchesList({ status }: Props) {
         <p className="text-center text-gray-500 mt-6">No matches found.</p>
       ) : (
         <div className="space-y-4 mt-2">
-          {paged.map(bet => {
+          {paged.map((bet) => {
             const now = Date.now();
             const started = now >= bet.startTime * 1000;
             const statusText = bet.isSettled
@@ -193,7 +202,8 @@ export default function MatchesList({ status }: Props) {
                 ? '🔴 Betting Closed'
                 : '🟢 Betting Open';
 
-            const isOrganiser = userAddress?.toLowerCase() === bet.organiser.toLowerCase();
+            const isOrganiser =
+              userAddress?.toLowerCase() === bet.organiser.toLowerCase();
 
             return (
               <Card key={bet.address}>
@@ -203,30 +213,53 @@ export default function MatchesList({ status }: Props) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <p><strong>Stake:</strong> {bet.stake} ETH</p>
-                  <p><strong>Start Time:</strong> {new Date(bet.startTime * 1000).toLocaleString()}</p>
-                  <p><strong>Organiser:</strong> {bet.organiser}</p>
+                  <p>
+                    <strong>Stake:</strong> {bet.stake} ETH
+                  </p>
+                  <p>
+                    <strong>Start Time:</strong>{' '}
+                    {new Date(bet.startTime * 1000).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Organiser:</strong> {bet.organiser}
+                  </p>
 
                   <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
                     <div>
-                      <p className="font-semibold text-blue-700">🏠 Home Team</p>
-                      <p><strong>Bets:</strong> {bet.totalHomeBets}</p>
-                      <p><strong>Pool:</strong> {bet.homeTeamPool} ETH</p>
+                      <p className="font-semibold text-blue-700">
+                        🏠 Home Team
+                      </p>
+                      <p>
+                        <strong>Bets:</strong> {bet.totalHomeBets}
+                      </p>
+                      <p>
+                        <strong>Pool:</strong> {bet.homeTeamPool} ETH
+                      </p>
                     </div>
                     <div>
                       <p className="font-semibold text-red-700">🚩 Away Team</p>
-                      <p><strong>Bets:</strong> {bet.totalAwayBets}</p>
-                      <p><strong>Pool:</strong> {bet.awayTeamPool} ETH</p>
+                      <p>
+                        <strong>Bets:</strong> {bet.totalAwayBets}
+                      </p>
+                      <p>
+                        <strong>Pool:</strong> {bet.awayTeamPool} ETH
+                      </p>
                     </div>
                   </div>
 
-                  <p><strong>Status:</strong> {statusText}</p>
+                  <p>
+                    <strong>Status:</strong> {statusText}
+                  </p>
 
                   {isOrganiser ? (
                     <>
-                      <p className="text-green-600 font-medium">You're the organiser!</p>
+                      <p className="text-green-600 font-medium">
+                        You're the organiser!
+                      </p>
                       {started && !bet.isSettled && (
-                        <SettleGameDialog betAddress={bet.address as `0x${string}`} />
+                        <SettleGameDialog
+                          betAddress={bet.address as `0x${string}`}
+                        />
                       )}
                     </>
                   ) : (
@@ -249,7 +282,12 @@ export default function MatchesList({ status }: Props) {
                   )}
 
                   <OrganiserRating organiser={bet.organiser as `0x${string}`} />
-                  <RateOrganiser organiser={bet.organiser as `0x${string}`} betAddress={bet.address as `0x${string}`} />
+                  {bet.isSettled && (
+                    <RateOrganiser
+                      organiser={bet.organiser as `0x${string}`}
+                      betAddress={bet.address as `0x${string}`}
+                    />
+                  )}
                 </CardContent>
               </Card>
             );
@@ -262,7 +300,7 @@ export default function MatchesList({ status }: Props) {
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
           disabled={currentPage <= 1}
-          onClick={() => setPage(p => Math.max(1, p - 1))}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
         >
           Prev
         </button>
@@ -272,7 +310,7 @@ export default function MatchesList({ status }: Props) {
         <button
           className="px-3 py-1 border rounded disabled:opacity-50"
           disabled={currentPage >= totalPages}
-          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
         >
           Next
         </button>

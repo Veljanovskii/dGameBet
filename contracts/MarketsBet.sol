@@ -71,7 +71,6 @@ contract MarketsBet {
     
     function settleAll(uint8 homeGoals, uint8 awayGoals) external onlyOrganiserOrMatch {
         require(!isSettled, "Markets already settled");
-        // optional: require(address(this).balance > 0, "No funds");
 
         // Evaluate winners per market
         bool ug0_2_win = (uint256(homeGoals) + uint256(awayGoals)) <= 2;

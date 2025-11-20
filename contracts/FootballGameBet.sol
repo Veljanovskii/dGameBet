@@ -45,7 +45,7 @@ contract FootballGameBet {
         factory = msg.sender;
     }
 
-    // ✅ Allow organiser OR factory to set markets exactly once
+    // Allow organiser OR factory to set markets exactly once
     function setMarkets(address _markets) external {
         require(msg.sender == organiser || msg.sender == factory, "Not authorized");
         require(markets == address(0), "Markets already set");

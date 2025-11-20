@@ -1,10 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import CreateBetForm from './CreateBetForm';
 
-export default function CreateBetDialog({ children }: { children: React.ReactNode }) {
+export default function CreateBetDialog({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
 
   return (

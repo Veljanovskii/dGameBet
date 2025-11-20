@@ -22,10 +22,16 @@ export const metadata: Metadata = {
   description: 'Bet on football matches!',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <WagmiProvider config={wagmiConfig}>
           <QueryProvider>
             <RainbowKitProvider>

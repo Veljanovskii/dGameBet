@@ -21,11 +21,16 @@ export default function CreateBetForm({ onSuccess }: Props) {
   const [startTime, setStartTime] = useState('');
   const [stake, setStake] = useState('');
 
-  const unixStartTime = startTime ? Math.floor(new Date(startTime).getTime() / 1000) : 0;
+  const unixStartTime = startTime
+    ? Math.floor(new Date(startTime).getTime() / 1000)
+    : 0;
 
   const { writeContract, data: txHash, status, error } = useWriteContract();
-  const { isLoading: isMining, isSuccess: isMined, error: mineError } =
-    useWaitForTransactionReceipt({ hash: txHash });
+  const {
+    isLoading: isMining,
+    isSuccess: isMined,
+    error: mineError,
+  } = useWaitForTransactionReceipt({ hash: txHash });
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const errorLogged = useRef(false);
@@ -99,25 +104,47 @@ export default function CreateBetForm({ onSuccess }: Props) {
       <CardContent className="px-0 space-y-4">
         <div className="space-y-2">
           <Label>Home Team</Label>
-          <Input value={homeTeam} onChange={(e) => setHomeTeam(e.target.value)} />
+          <Input
+            value={homeTeam}
+            onChange={(e) => setHomeTeam(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Away Team</Label>
-          <Input value={awayTeam} onChange={(e) => setAwayTeam(e.target.value)} />
+          <Input
+            value={awayTeam}
+            onChange={(e) => setAwayTeam(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Start Time</Label>
-          <Input type="datetime-local" value={startTime} min={new Date().toISOString().slice(0, 16)} onChange={(e) => setStartTime(e.target.value)} />
+          <Input
+            type="datetime-local"
+            value={startTime}
+            min={new Date().toISOString().slice(0, 16)}
+            onChange={(e) => setStartTime(e.target.value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Stake (ETH)</Label>
-          <Input type="number" step="0.01" value={stake} onChange={(e) => setStake(e.target.value)} />
+          <Input
+            type="number"
+            step="0.01"
+            value={stake}
+            onChange={(e) => setStake(e.target.value)}
+          />
         </div>
 
-        <Button onClick={handleCreate} disabled={!homeTeam || !awayTeam || !startTime || !stake || isSubmitting} className="w-full">
+        <Button
+          onClick={handleCreate}
+          disabled={
+            !homeTeam || !awayTeam || !startTime || !stake || isSubmitting
+          }
+          className="w-full"
+        >
           {isSubmitting ? 'Confirming…' : 'Create Bet'}
         </Button>
 

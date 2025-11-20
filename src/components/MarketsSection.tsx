@@ -8,24 +8,28 @@ import {
   useWriteContract,
 } from 'wagmi';
 import { FOOTBALL_GAME_BET_ABI, MARKETS_BET_ABI } from '@contracts/contracts';
-import { parseEther, zeroAddress } from 'viem';
-import { notifyBetsChanged } from '@/lib/events';
+import { formatEther, parseEther, zeroAddress } from 'viem';
+import { notifyBetsChanged, onBetsChanged } from '@/lib/events';
 import { Button } from '@/components/ui/button';
 
 type Props = {
   betAddress: `0x${string}`;
-  stake: string;
-  startTime: number;
+  stake: string; // in ETH string
+  startTime: number; // unix seconds
 };
 
-export default function MarketsSection({ betAddress, stake, startTime }: Props) {
-  const { address: userAddress } = useAccount();
-  const [pending, setPending] = useState<null | 'UG_0_2' | 'UG_3_PLUS' | 'GG'>(null);
+export default function MarketsSection({
+  betAddress,
+  stake,
+  startTime,
+}: Props) {
+  const { address: user } = useAccount();
 
-  // 1) Read per-match MarketsBet address from FootballGameBet
+  // 1) Resolve MarketsBet address from the match
   const {
     data: marketsAddressData,
     isLoading: loadingMarketsAddr,
+    refetch: refetchMarketsAddr,
   } = useReadContract({
     address: betAddress,
     abi: FOOTBALL_GAME_BET_ABI,
@@ -33,66 +37,167 @@ export default function MarketsSection({ betAddress, stake, startTime }: Props) 
   });
 
   const marketsAddress = useMemo(
-    () => ((marketsAddressData as `0x${string}` | undefined) ?? zeroAddress),
+    () => (marketsAddressData as `0x${string}` | undefined) ?? zeroAddress,
     [marketsAddressData]
   );
 
-  const marketsAvailable =
-    !!marketsAddress && marketsAddress !== zeroAddress;
+  const enabled = !!user && !!marketsAddress && marketsAddress !== zeroAddress;
 
-  // 2) Check if the current user already bet each market
-  // Only enable these reads if we have a user and a valid markets address
-  const enabledHasBet = !!userAddress && marketsAvailable;
+  // 2) Read per-market: hasBet, totalBets, poolSize
+  // Market indexes: 0 = UG_0_2, 1 = UG_3_PLUS, 2 = GG
 
-  const { data: ug02Has, refetch: refUG02 } = useReadContract({
+  // -- hasBet
+  const { data: ug02Has, refetch: refUG02Has } = useReadContract({
     address: marketsAddress,
     abi: MARKETS_BET_ABI,
     functionName: 'hasBet',
-    args: [0, (userAddress ?? zeroAddress) as `0x${string}`],
-    query: { enabled: enabledHasBet },
+    args: [0, user ?? zeroAddress],
+    query: { enabled },
   });
-
-  const { data: ug3pHas, refetch: refUG3P } = useReadContract({
+  const { data: ug3pHas, refetch: refUG3PHas } = useReadContract({
     address: marketsAddress,
     abi: MARKETS_BET_ABI,
     functionName: 'hasBet',
-    args: [1, (userAddress ?? zeroAddress) as `0x${string}`],
-    query: { enabled: enabledHasBet },
+    args: [1, user ?? zeroAddress],
+    query: { enabled },
   });
-
-  const { data: ggHas, refetch: refGG } = useReadContract({
+  const { data: ggHas, refetch: refGGHas } = useReadContract({
     address: marketsAddress,
     abi: MARKETS_BET_ABI,
     functionName: 'hasBet',
-    args: [2, (userAddress ?? zeroAddress) as `0x${string}`],
-    query: { enabled: enabledHasBet },
+    args: [2, user ?? zeroAddress],
+    query: { enabled },
   });
 
-  const hasUG02 = Boolean(ug02Has as boolean | undefined);
-  const hasUG3P = Boolean(ug3pHas as boolean | undefined);
-  const hasGG   = Boolean(ggHas as boolean | undefined);
+  // -- totals/bets
+  const { data: ug02Count, refetch: refUG02Count } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'totalBets',
+    args: [0],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
+  const { data: ug3pCount, refetch: refUG3PCount } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'totalBets',
+    args: [1],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
+  const { data: ggCount, refetch: refGGCount } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'totalBets',
+    args: [2],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
 
-  // 3) Prepare write + receipt
-  const { writeContractAsync, data: txHash, status, error } = useWriteContract();
-  const { isLoading: mining, isSuccess: mined } = useWaitForTransactionReceipt({ hash: txHash });
+  // -- pools
+  const { data: ug02Pool, refetch: refUG02Pool } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'poolSize',
+    args: [0],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
+  const { data: ug3pPool, refetch: refUG3PPool } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'poolSize',
+    args: [1],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
+  const { data: ggPool, refetch: refGGPool } = useReadContract({
+    address: marketsAddress,
+    abi: MARKETS_BET_ABI,
+    functionName: 'poolSize',
+    args: [2],
+    query: { enabled: !!marketsAddress && marketsAddress !== zeroAddress },
+  });
 
+  // 3) Write + receipt
+  const {
+    writeContractAsync,
+    data: txHash,
+    status,
+    error,
+  } = useWriteContract();
+  const { isLoading: mining, isSuccess: mined } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  const [pending, setPending] = useState<null | 'UG_0_2' | 'UG_3_PLUS' | 'GG'>(
+    null
+  );
   const bettingClosed = Date.now() >= startTime * 1000;
-  const disabledGlobal = bettingClosed || loadingMarketsAddr || !userAddress || !marketsAvailable;
+  const disabledGlobally = bettingClosed || loadingMarketsAddr || !user;
+
+  // Refresh readings on global bets changes (someone else bet), and after we mine our own tx
+  useEffect(() => {
+    const refreshAll = async () => {
+      await Promise.allSettled([
+        refetchMarketsAddr(),
+        refUG02Has(),
+        refUG3PHas(),
+        refGGHas(),
+        refUG02Count(),
+        refUG3PCount(),
+        refGGCount(),
+        refUG02Pool(),
+        refUG3PPool(),
+        refGGPool(),
+      ]);
+    };
+
+    const off = onBetsChanged(refreshAll);
+    return off;
+  }, [
+    refetchMarketsAddr,
+    refUG02Has,
+    refUG3PHas,
+    refGGHas,
+    refUG02Count,
+    refUG3PCount,
+    refGGCount,
+    refUG02Pool,
+    refUG3PPool,
+    refGGPool,
+  ]);
 
   useEffect(() => {
     if (mined) {
       setPending(null);
-      // Refresh local UI state and notify lists
-      Promise.allSettled([refUG02(), refUG3P(), refGG()]);
-      notifyBetsChanged();
+      // refresh and let the rest of the app know
+      Promise.allSettled([
+        refUG02Has(),
+        refUG3PHas(),
+        refGGHas(),
+        refUG02Count(),
+        refUG3PCount(),
+        refGGCount(),
+        refUG02Pool(),
+        refUG3PPool(),
+        refGGPool(),
+      ]).finally(() => notifyBetsChanged());
     }
-  }, [mined, refUG02, refUG3P, refGG]);
+  }, [
+    mined,
+    refUG02Has,
+    refUG3PHas,
+    refGGHas,
+    refUG02Count,
+    refUG3PCount,
+    refGGCount,
+    refUG02Pool,
+    refUG3PPool,
+    refGGPool,
+  ]);
 
   const place = async (
     fn: 'betUG_0_2' | 'betUG_3_PLUS' | 'betGG',
     tag: 'UG_0_2' | 'UG_3_PLUS' | 'GG'
   ) => {
-    if (!marketsAvailable) {
+    if (!marketsAddress || marketsAddress === zeroAddress) {
       alert('Markets are not available for this match.');
       return;
     }
@@ -111,70 +216,97 @@ export default function MarketsSection({ betAddress, stake, startTime }: Props) 
     }
   };
 
-  // --- Render guards ---
-  if (!userAddress) return null; // show only for connected users
-
-  if (loadingMarketsAddr) {
+  if (!user) return null; // only show when connected
+  if (loadingMarketsAddr)
     return <p className="text-xs text-gray-400">Loading markets…</p>;
-  }
-
-  if (!marketsAvailable) {
-    return <p className="text-xs text-gray-500">Markets not available for this match.</p>;
-  }
-
-  if (bettingClosed) {
+  if (!marketsAddress || marketsAddress === zeroAddress)
+    return (
+      <p className="text-xs text-gray-500">
+        Markets not available for this match.
+      </p>
+    );
+  if (bettingClosed)
     return <p className="text-sm text-red-500">🔒 Markets betting closed.</p>;
-  }
 
-  // --- UI ---
+  // Safe formatters
+  const fmtPool = (v: unknown) => {
+    try {
+      return formatEther((v as bigint) ?? 0n);
+    } catch {
+      return '0';
+    }
+  };
+  const fmtCount = (v: unknown) => Number(v ?? 0);
+
+  const ug02Disabled =
+    disabledGlobally ||
+    status === 'pending' ||
+    mining ||
+    (ug02Has as boolean) === true ||
+    pending === 'UG_0_2';
+  const ug3pDisabled =
+    disabledGlobally ||
+    status === 'pending' ||
+    mining ||
+    (ug3pHas as boolean) === true ||
+    pending === 'UG_3_PLUS';
+  const ggDisabled =
+    disabledGlobally ||
+    status === 'pending' ||
+    mining ||
+    (ggHas as boolean) === true ||
+    pending === 'GG';
+
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-3 space-y-3">
       <p className="text-sm font-medium">Additional markets:</p>
-      <div className="flex flex-wrap gap-2">
+
+      {/* UG 0–2 */}
+      <div className="flex items-center gap-3">
         <Button
           variant="secondary"
-          disabled={
-            disabledGlobal ||
-            hasUG02 ||
-            status === 'pending' ||
-            mining ||
-            pending === 'UG_0_2'
-          }
+          disabled={ug02Disabled}
           onClick={() => place('betUG_0_2', 'UG_0_2')}
-          title={hasUG02 ? 'Already placed a bet on UG 0–2' : undefined}
         >
-          {pending === 'UG_0_2' && (mining || status === 'pending') ? 'Placing…' : 'UG 0–2'}
+          {pending === 'UG_0_2' && (mining || status === 'pending')
+            ? 'Placing…'
+            : 'UG 0–2'}
         </Button>
+        <span className="text-xs text-gray-600">
+          Pool: {fmtPool(ug02Pool)} ETH · Bets: {fmtCount(ug02Count)}
+        </span>
+      </div>
 
+      {/* UG 3+ */}
+      <div className="flex items-center gap-3">
         <Button
           variant="secondary"
-          disabled={
-            disabledGlobal ||
-            hasUG3P ||
-            status === 'pending' ||
-            mining ||
-            pending === 'UG_3_PLUS'
-          }
+          disabled={ug3pDisabled}
           onClick={() => place('betUG_3_PLUS', 'UG_3_PLUS')}
-          title={hasUG3P ? 'Already placed a bet on UG 3+' : undefined}
         >
-          {pending === 'UG_3_PLUS' && (mining || status === 'pending') ? 'Placing…' : 'UG 3+'}
+          {pending === 'UG_3_PLUS' && (mining || status === 'pending')
+            ? 'Placing…'
+            : 'UG 3+'}
         </Button>
+        <span className="text-xs text-gray-600">
+          Pool: {fmtPool(ug3pPool)} ETH · Bets: {fmtCount(ug3pCount)}
+        </span>
+      </div>
 
+      {/* GG */}
+      <div className="flex items-center gap-3">
         <Button
           variant="secondary"
-          disabled={
-            disabledGlobal ||
-            hasGG ||
-            status === 'pending' ||
-            mining ||
-            pending === 'GG'
-          }
+          disabled={ggDisabled}
           onClick={() => place('betGG', 'GG')}
-          title={hasGG ? 'Already placed a bet on GG' : undefined}
         >
-          {pending === 'GG' && (mining || status === 'pending') ? 'Placing…' : 'GG'}
+          {pending === 'GG' && (mining || status === 'pending')
+            ? 'Placing…'
+            : 'GG'}
         </Button>
+        <span className="text-xs text-gray-600">
+          Pool: {fmtPool(ggPool)} ETH · Bets: {fmtCount(ggCount)}
+        </span>
       </div>
 
       {error && (
